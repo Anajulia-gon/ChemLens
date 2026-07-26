@@ -1,0 +1,40 @@
+* {
+  margin: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: rgb(210, 210, 210);
+  font-family: var(--font-inter), Inter, sans-serif;
+}
+
+a {
+  color: #262626;
+}
+
+a:hover {
+  color: #000;
+}
+
+input {
+  font-family: var(--font-inter), Inter, sans-serif;
+}
+
+input:focus {
+  outline: none;
+}
+
+input::placeholder {
+  color: #8c8c8c;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
