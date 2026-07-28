@@ -1,20 +1,24 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { colors } from "@/lib/theme";
+import { useEffect, useMemo, useState, type MouseEvent } from "react";
+import { codGray, colors } from "@/lib/theme";
 import { useResolvedNames } from "@/hooks/useResolvedName";
 import { queueNameResolution } from "@/lib/nameResolver";
-import { UNKNOWN_MOLECULE_NAME } from "@/lib/molecules";
-import type { MoleculeResult, RadarRange, ReliabilityStatus } from "@/types/prediction";
+import { deleteMolecules } from "@/lib/api";
+import { InfoIcon } from "../InfoIcon";
+import type { MoleculeResult, PredictionResponse, RadarRange, ReliabilityStatus } from "@/types/prediction";
 import { CheckIcon, FilterIcon, SearchIcon } from "../icons";
 import { DetailPanel } from "./DetailPanel";
 import { ImageModal } from "./ImageModal";
 import { RadarModal } from "./RadarModal";
 
 interface ResultsDashboardProps {
+  studyId: number;
   results: MoleculeResult[];
   radarAxes: string[];
   radarRanges: Record<string, RadarRange>;
+  onMoleculesDeleted: (updated: PredictionResponse) => void;
+  onError: (message: string) => void;
 }
 
 const STATUS_LIST: ReliabilityStatus[] = ["Risk Alert", "Review Suggested", "High Confidence"];
@@ -24,18 +28,13 @@ const STATUS_COLORS: Record<ReliabilityStatus, string> = {
   "High Confidence": colors.statusHighConfidence,
 };
 
-// Faixa do histograma casada com o eixo do painel de detalhes (-8 a +2 logS).
-const BIN_MIN = -8;
-const BIN_COUNT = 11;
+const INFO_TEXT = {
+  MW: "Molecular weight of the compound. Optimal: 100~500",
+  LogP: "Octanol-water partition coefficient (lipophilicity). Optimal: 0~5",
+  LogS: "Base-10 logarithm machine learning estimation of aqueous solubility with calculated confidence interval. See documentation for more details",
+};
 
-function binOf(logS: number) {
-  let i = Math.floor(logS - BIN_MIN);
-  if (i < 0) i = 0;
-  if (i > BIN_COUNT - 1) i = BIN_COUNT - 1;
-  return i;
-}
-
-function Checkbox({ checked, onClick }: { checked: boolean; onClick: () => void }) {
+function Checkbox({ checked, onClick }: { checked: boolean; onClick: (e: MouseEvent) => void }) {
   return (
     <div
       onClick={onClick}
@@ -43,7 +42,7 @@ function Checkbox({ checked, onClick }: { checked: boolean; onClick: () => void 
         width: 19,
         height: 19,
         borderRadius: 5,
-        border: `1.5px solid ${checked ? colors.ink : "#b0b0b0"}`,
+        border: `1.5px solid ${checked ? colors.ink : codGray[400]}`,
         background: checked ? colors.ink : "transparent",
         cursor: "pointer",
         display: "flex",
@@ -56,26 +55,31 @@ function Checkbox({ checked, onClick }: { checked: boolean; onClick: () => void 
   );
 }
 
-export function ResultsDashboard({ results, radarAxes, radarRanges }: ResultsDashboardProps) {
+export function ResultsDashboard({ studyId, results, radarAxes, radarRanges, onMoleculesDeleted, onError }: ResultsDashboardProps) {
   const [search, setSearch] = useState("");
   const [filterOpen, setFilterOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<Record<string, boolean>>({});
   const [regMin, setRegMin] = useState("");
   const [regMax, setRegMax] = useState("");
   const [selected, setSelected] = useState<Record<number, boolean>>({});
-  const [binFilter, setBinFilter] = useState<number | null>(null);
-  const [detailId, setDetailId] = useState<number | null>(null);
-  const [detailClosing, setDetailClosing] = useState(false);
+  const [detailId, setDetailId] = useState<number | null>(results[0]?.id ?? null);
   const [imgOpen, setImgOpen] = useState(false);
   const [radarOpen, setRadarOpen] = useState(false);
+  const [lastStudyId, setLastStudyId] = useState(studyId);
+
+  // Ao abrir um estudo diferente (troca de studyId), volta a mostrar os
+  // detalhes da primeira molécula por padrão.
+  if (studyId !== lastStudyId) {
+    setLastStudyId(studyId);
+    setDetailId(results[0]?.id ?? null);
+  }
 
   const resolvedNames = useResolvedNames();
 
-  // Reabrir um estudo cujas moléculas ainda não tiveram o nome resolvido
-  // (ex.: veio de um CSV sem coluna de nome) enfileira a resolução aqui também.
+  // Nome final sempre vem da API — reabrir um estudo enfileira a resolução
+  // de novo aqui também (o cache evita refazer consultas já resolvidas).
   useEffect(() => {
-    const unresolved = results.filter((m) => m.name === UNKNOWN_MOLECULE_NAME).map((m) => m.smiles);
-    if (unresolved.length) queueNameResolution(unresolved);
+    queueNameResolution(results.map((m) => m.smiles));
   }, [results]);
 
   const nameFor = (m: MoleculeResult) => resolvedNames[m.smiles] || m.name;
@@ -95,27 +99,14 @@ export function ResultsDashboard({ results, radarAxes, radarRanges }: ResultsDas
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [results, search, statusFilter, regMin, regMax, resolvedNames]);
 
-  const selectedFiltered = filtered.filter((m) => selected[m.id]);
-  const considered = selectedFiltered.length ? selectedFiltered : filtered;
-
-  const orderedFiltered =
-    binFilter != null ? [...filtered].sort((a, b) => (selected[b.id] ? 1 : 0) - (selected[a.id] ? 1 : 0)) : filtered;
+  const selectedCount = Object.values(selected).filter(Boolean).length;
 
   const allOn = filtered.length > 0 && filtered.every((m) => selected[m.id]);
-
-  const counts = new Array(BIN_COUNT).fill(0);
-  considered.forEach((m) => counts[binOf(m.logS)]++);
-  const baseCounts = new Array(BIN_COUNT).fill(0);
-  filtered.forEach((m) => baseCounts[binOf(m.logS)]++);
-  const maxC = Math.max(...baseCounts, ...counts, 1);
-  const yMax = Math.max(5, Math.ceil(maxC / 5) * 5);
-  const showGhost = selectedFiltered.length > 0 && selectedFiltered.length < filtered.length;
 
   const detailMolecule = detailId != null ? results.find((m) => m.id === detailId) ?? null : null;
 
   const toggleSelect = (id: number) => {
     setSelected((prev) => ({ ...prev, [id]: !prev[id] }));
-    setBinFilter(null);
   };
   const toggleAll = () => {
     const on = filtered.length > 0 && filtered.every((m) => selected[m.id]);
@@ -124,20 +115,6 @@ export function ResultsDashboard({ results, radarAxes, radarRanges }: ResultsDas
       if (on) delete next[m.id];
       else next[m.id] = true;
     });
-    setSelected(next);
-    setBinFilter(null);
-  };
-  const selectBin = (i: number) => {
-    if (binFilter === i) {
-      setBinFilter(null);
-      setSelected({});
-      return;
-    }
-    const next: Record<number, boolean> = {};
-    filtered.forEach((m) => {
-      if (binOf(m.logS) === i) next[m.id] = true;
-    });
-    setBinFilter(i);
     setSelected(next);
   };
   const toggleStatusFilter = (s: string) => setStatusFilter((prev) => ({ ...prev, [s]: !prev[s] }));
@@ -148,24 +125,39 @@ export function ResultsDashboard({ results, radarAxes, radarRanges }: ResultsDas
   };
 
   const openDetail = (id: number) => {
-    setDetailClosing(false);
     setDetailId(id);
   };
-  const closeDetail = () => {
-    setDetailClosing(true);
-    setTimeout(() => {
-      setDetailId(null);
-      setDetailClosing(false);
-    }, 240);
+
+  const handleDeleteSelected = async () => {
+    const ids = Object.keys(selected)
+      .filter((k) => selected[Number(k)])
+      .map(Number);
+    if (!ids.length) return;
+    try {
+      const updated = await deleteMolecules(studyId, ids);
+      onMoleculesDeleted(updated);
+      setSelected({});
+    } catch (err) {
+      onError(err instanceof Error ? err.message : "Failed to delete the selected molecules.");
+    }
   };
 
   return (
     <div style={{ animation: "resultsIn .5s cubic-bezier(.22,.61,.36,1) .18s both" }}>
+      <div style={{ position: "absolute", left: 150, top: 40, width: 828 }}>
+        <span style={{ display: "block", fontWeight: 700, fontSize: 22, color: colors.cardTitle }}>
+          Molecular Screening Results
+        </span>
+        <span style={{ display: "block", marginTop: 6, fontSize: 14, color: colors.emptySubtitle, lineHeight: 1.4 }}>
+          Review predicted properties and LogS reliability. Select a molecule to explore its full details.
+        </span>
+      </div>
+
       <div
         style={{
           position: "absolute",
           left: 150,
-          top: 56,
+          top: 136,
           width: 690,
           height: 56,
           background: colors.inputField,
@@ -180,8 +172,8 @@ export function ResultsDashboard({ results, radarAxes, radarRanges }: ResultsDas
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Pesquise por molécula"
-          style={{ flex: 1, border: "none", background: "transparent", fontSize: 16, color: colors.cardTitle, height: "100%" }}
+          placeholder="Search for a molecule"
+          style={{ flex: 1, border: "none", background: "transparent", fontSize: 18, color: colors.cardTitle, height: "100%" }}
         />
       </div>
 
@@ -190,10 +182,10 @@ export function ResultsDashboard({ results, radarAxes, radarRanges }: ResultsDas
         style={{
           position: "absolute",
           left: 858,
-          top: 56,
+          top: 136,
           width: 120,
           height: 56,
-          background: "#d8dadd",
+          background: codGray[300],
           borderRadius: 10,
           display: "flex",
           alignItems: "center",
@@ -203,7 +195,7 @@ export function ResultsDashboard({ results, radarAxes, radarRanges }: ResultsDas
         }}
       >
         <FilterIcon />
-        <span style={{ fontWeight: 500, fontSize: 16, color: colors.tabIdleText }}>Filtro</span>
+        <span style={{ fontWeight: 500, fontSize: 18, color: colors.tabIdleText }}>Filter</span>
       </div>
 
       {filterOpen && (
@@ -211,7 +203,7 @@ export function ResultsDashboard({ results, radarAxes, radarRanges }: ResultsDas
           style={{
             position: "absolute",
             left: 730,
-            top: 124,
+            top: 204,
             width: 300,
             background: colors.white,
             borderRadius: 12,
@@ -240,20 +232,20 @@ export function ResultsDashboard({ results, radarAxes, radarRanges }: ResultsDas
               <input
                 value={regMin}
                 onChange={(e) => setRegMin(e.target.value)}
-                placeholder="mín"
-                style={{ width: "100%", height: 36, border: "1px solid #d5d5d5", borderRadius: 8, padding: "0 10px", fontSize: 14, color: colors.cardTitle }}
+                placeholder="min"
+                style={{ width: "100%", height: 36, border: `1px solid ${codGray[300]}`, borderRadius: 8, padding: "0 10px", fontSize: 14, color: colors.cardTitle }}
               />
               <span style={{ color: colors.emptySubtitle }}>–</span>
               <input
                 value={regMax}
                 onChange={(e) => setRegMax(e.target.value)}
-                placeholder="máx"
-                style={{ width: "100%", height: 36, border: "1px solid #d5d5d5", borderRadius: 8, padding: "0 10px", fontSize: 14, color: colors.cardTitle }}
+                placeholder="max"
+                style={{ width: "100%", height: 36, border: `1px solid ${codGray[300]}`, borderRadius: 8, padding: "0 10px", fontSize: 14, color: colors.cardTitle }}
               />
             </div>
           </div>
-          <div onClick={clearFilters} style={{ alignSelf: "flex-start", fontSize: 13, color: "#6a6a6a", cursor: "pointer", textDecoration: "underline" }}>
-            Limpar filtros
+          <div onClick={clearFilters} style={{ alignSelf: "flex-start", fontSize: 14, color: codGray[500], cursor: "pointer", textDecoration: "underline" }}>
+            Clear filters
           </div>
         </div>
       )}
@@ -262,7 +254,7 @@ export function ResultsDashboard({ results, radarAxes, radarRanges }: ResultsDas
         style={{
           position: "absolute",
           left: 150,
-          top: 150,
+          top: 230,
           width: 828,
           height: 52,
           background: colors.tableHeaderBg,
@@ -271,202 +263,144 @@ export function ResultsDashboard({ results, radarAxes, radarRanges }: ResultsDas
           alignItems: "center",
           fontWeight: 600,
           fontSize: 14,
-          color: "#242424",
+          color: codGray[800],
           paddingLeft: 6,
         }}
       >
         <div style={{ width: 48, display: "flex", justifyContent: "center" }}>
           <Checkbox checked={allOn} onClick={toggleAll} />
         </div>
-        <div style={{ width: 150 }}>Nome</div>
-        <div style={{ width: 224 }}>SMILES</div>
-        <div style={{ width: 158, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", paddingRight: 8 }}>
-          Regression pred logS
-        </div>
-        <div style={{ width: 158 }}>Status Confiability</div>
-        <div style={{ flex: 1 }} />
+        <div style={{ width: 150 }}>Molecule Name</div>
+        <div style={{ width: 230 }}>Smiles</div>
+        <div style={{ width: 130 }}>Molecular Weight</div>
+        <div style={{ width: 110 }}>LogP</div>
+        <div style={{ flex: 1 }}>LogS</div>
       </div>
       <div
         style={{
           position: "absolute",
           left: 150,
-          top: 202,
+          top: 282,
           width: 828,
-          height: 818,
-          overflowY: "auto",
-          background: colors.white,
-          border: `1px solid ${colors.tableBorder}`,
-          borderTop: "none",
-          borderRadius: "0 0 10px 10px",
+          height: 738,
         }}
       >
-        {orderedFiltered.map((m, i) => (
-          <div
-            key={m.id}
-            onMouseEnter={(e) => (e.currentTarget.style.background = colors.tableRowHover)}
-            onMouseLeave={(e) => (e.currentTarget.style.background = i % 2 === 0 ? colors.white : colors.tableRowAlt)}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              height: 46,
-              borderBottom: `1px solid ${colors.tableDividerRow}`,
-              fontSize: 15,
-              paddingLeft: 6,
-              background: i % 2 === 0 ? colors.white : colors.tableRowAlt,
-              transition: "background .12s",
-            }}
-          >
-            <div style={{ width: 48, display: "flex", justifyContent: "center" }}>
-              <Checkbox checked={!!selected[m.id]} onClick={() => toggleSelect(m.id)} />
-            </div>
-            <div style={{ width: 150, color: "#222", fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", paddingRight: 10 }}>
-              {nameFor(m)}
-            </div>
-            <div style={{ width: 224, fontFamily: "monospace", fontSize: 12.5, color: "#6a6a6a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", paddingRight: 12 }}>
-              {m.smiles}
-            </div>
-            <div style={{ width: 158, color: "#222" }}>{m.logS.toFixed(2)}</div>
-            <div style={{ width: 158, fontWeight: 600, color: STATUS_COLORS[m.status] }}>{m.status}</div>
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            overflowY: "auto",
+            overflowX: "hidden",
+            background: colors.white,
+            border: `1px solid ${colors.tableBorder}`,
+            borderTop: "none",
+            borderRadius: "0 0 10px 10px",
+          }}
+        >
+          {filtered.map((m, i) => {
+            const isActive = m.id === detailId;
+            const baseBg = isActive ? colors.tableRowActive : i % 2 === 0 ? colors.white : colors.tableRowAlt;
+            return (
             <div
+              key={m.id}
               onClick={() => openDetail(m.id)}
-              onMouseEnter={(e) => (e.currentTarget.style.color = "#4a4a4a")}
-              onMouseLeave={(e) => (e.currentTarget.style.color = "#9a9a9a")}
-              style={{ flex: 1, color: "#9a9a9a", cursor: "pointer", transition: "color .15s" }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = colors.tableRowHover)}
+              onMouseLeave={(e) => (e.currentTarget.style.background = baseBg)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                height: 46,
+                borderBottom: `1px solid ${colors.tableDividerRow}`,
+                fontSize: 14,
+                paddingLeft: 6,
+                background: baseBg,
+                transition: "background .12s",
+                cursor: "pointer",
+              }}
             >
-              Detalhes
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div
-        style={{
-          position: "absolute",
-          left: 1030,
-          top: 150,
-          width: 820,
-          height: 346,
-          background: colors.canvas,
-          border: "1px solid #ececec",
-          borderRadius: 12,
-          padding: "22px 26px",
-        }}
-      >
-        <span style={{ fontWeight: 600, fontSize: 18, color: "#333" }}>SMILES count por LogS_pred(mol/L)</span>
-        <div style={{ display: "flex", height: 250, marginTop: 14 }}>
-          <div style={{ width: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ transform: "rotate(-90deg)", whiteSpace: "nowrap", fontSize: 12, color: colors.chartAxisText }}>
-              SMILES count
-            </span>
-          </div>
-          <div style={{ width: 34, position: "relative" }}>
-            <span style={{ position: "absolute", top: -6, right: 6, fontSize: 12, color: colors.chartAxisText }}>{yMax}</span>
-            <span style={{ position: "absolute", top: "calc(50% - 19px)", right: 6, fontSize: 12, color: colors.chartAxisText }}>
-              {yMax / 2}
-            </span>
-            <span style={{ position: "absolute", bottom: 24, right: 6, fontSize: 12, color: colors.chartAxisText }}>0</span>
-          </div>
-          <div style={{ flex: 1, position: "relative" }}>
-            <div style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 26 }}>
-              <div style={{ position: "absolute", left: 0, right: 0, top: 0, borderTop: `1px dashed ${colors.chartGridLine}` }} />
-              <div style={{ position: "absolute", left: 0, right: 0, top: "50%", borderTop: `1px dashed ${colors.chartGridLine}` }} />
-              <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, borderTop: `1px solid ${colors.chartBaseline}` }} />
-              {showGhost && (
-                <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "flex-end", gap: 8, padding: "0 4px" }}>
-                  {baseCounts.map((c, i) => (
-                    <div
-                      key={i}
-                      style={{
-                        flex: 1,
-                        height: `${(c / yMax) * 100}%`,
-                        background: colors.chartBar,
-                        opacity: 0.2,
-                        borderRadius: "3px 3px 0 0",
-                        minHeight: 2,
-                      }}
-                    />
-                  ))}
-                </div>
-              )}
-              <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "flex-end", gap: 8, padding: "0 4px" }}>
-                {counts.map((c, i) => (
-                  <div
-                    key={i}
-                    onClick={() => selectBin(i)}
-                    title="Filtrar por esta faixa"
-                    onMouseEnter={(e) => (e.currentTarget.style.filter = "brightness(1.08)")}
-                    onMouseLeave={(e) => (e.currentTarget.style.filter = "none")}
-                    style={{
-                      flex: 1,
-                      height: `${(c / yMax) * 100}%`,
-                      background: binFilter === i ? colors.chartBarActive : colors.chartBar,
-                      borderRadius: "3px 3px 0 0",
-                      minHeight: 2,
-                      cursor: "pointer",
-                    }}
-                  />
-                ))}
+              <div style={{ width: 48, display: "flex", justifyContent: "center" }}>
+                <Checkbox
+                  checked={!!selected[m.id]}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleSelect(m.id);
+                  }}
+                />
+              </div>
+              <div style={{ width: 150, color: codGray[800], fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", paddingRight: 10 }}>
+                {nameFor(m)}
+              </div>
+              <div style={{ width: 230, fontFamily: "monospace", fontSize: 12, color: codGray[500], whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", paddingRight: 12 }}>
+                {m.smiles}
+              </div>
+              <div style={{ width: 130, display: "flex", alignItems: "center", gap: 6, color: codGray[800] }}>
+                {m.descriptors.MolWt.toFixed(2)}
+                <InfoIcon text={INFO_TEXT.MW} />
+              </div>
+              <div style={{ width: 110, display: "flex", alignItems: "center", gap: 6, color: codGray[800] }}>
+                {m.descriptors.MolLogP.toFixed(2)}
+                <InfoIcon text={INFO_TEXT.LogP} />
+              </div>
+              <div style={{ flex: 1, display: "flex", alignItems: "baseline", gap: 6, color: codGray[800], paddingRight: 12 }}>
+                <span>{m.logS.toFixed(2)}</span>
+                <span style={{ fontSize: 12, color: codGray[500] }}>± {m.margin.toFixed(2)}</span>
+                <span style={{ display: "inline-flex", alignItems: "center" }}>
+                  <InfoIcon text={INFO_TEXT.LogS} />
+                </span>
               </div>
             </div>
-            <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 22, display: "flex", gap: 8, padding: "0 4px" }}>
-              {counts.map((_, i) => {
-                const edge = BIN_MIN + i;
-                const showLabel = edge % 2 === 0;
-                return (
-                  <div key={i} style={{ flex: 1, textAlign: "center", fontSize: 11, color: "#999" }}>
-                    {showLabel ? (edge > 0 ? `+${edge}` : edge) : ""}
-                  </div>
-                );
-              })}
+            );
+          })}
+        </div>
+
+        {selectedCount > 0 && (
+          <div
+            style={{
+              position: "absolute",
+              left: "50%",
+              bottom: 20,
+              transform: "translateX(-50%)",
+              display: "flex",
+              alignItems: "center",
+              background: codGray[900],
+              borderRadius: 999,
+              boxShadow: "0 10px 28px rgba(0,0,0,.35)",
+              overflow: "hidden",
+              zIndex: 60,
+            }}
+          >
+            <span style={{ padding: "14px 22px", fontSize: 14, fontWeight: 500, color: colors.white, whiteSpace: "nowrap" }}>
+              {selectedCount} Selected
+            </span>
+            <div style={{ width: 1, alignSelf: "stretch", background: "rgba(255,255,255,0.18)" }} />
+            <div
+              onClick={handleDeleteSelected}
+              onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.8")}
+              onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+              style={{
+                padding: "14px 22px",
+                fontSize: 14,
+                fontWeight: 500,
+                color: colors.statusRiskAlert,
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+              }}
+            >
+              Delete
             </div>
           </div>
-        </div>
-        <div style={{ textAlign: "center", fontSize: 12, color: colors.chartAxisText, marginTop: 4, paddingLeft: 52 }}>
-          LogS_pred(mol/L)
-        </div>
-      </div>
-
-      <span style={{ position: "absolute", left: 1030, top: 512, fontWeight: 600, fontSize: 22, color: "#1f1f1f" }}>
-        Resumo do estudo
-      </span>
-      <div style={{ position: "absolute", left: 1030, top: 556, width: 820, display: "flex", gap: 26 }}>
-        <SummaryCard title="Total de moléculas" value={considered.length} />
-        <SummaryCard
-          title="Hits Confiáveis"
-          desc="volume de moléculas classificadas com o sinal verde pelo Error Model"
-          value={considered.filter((m) => m.status === "High Confidence").length}
-        />
-        <SummaryCard
-          title="Retidos por Incerteza"
-          desc="O total de moléculas sinalizadas com alto risco de predição incorreta devido a limitações de generalização da IA"
-          value={considered.filter((m) => m.status === "Risk Alert").length}
-          smallTitle
-        />
+        )}
       </div>
 
       <DetailPanel
         molecule={detailMolecule}
         radarAxes={radarAxes}
         radarRanges={radarRanges}
-        isClosing={detailClosing}
-        onClose={closeDetail}
         onOpenImage={() => setImgOpen(true)}
         onOpenRadar={() => setRadarOpen(true)}
       />
       <ImageModal molecule={imgOpen ? detailMolecule : null} onClose={() => setImgOpen(false)} />
       <RadarModal molecule={radarOpen ? detailMolecule : null} radarAxes={radarAxes} radarRanges={radarRanges} onClose={() => setRadarOpen(false)} />
-    </div>
-  );
-}
-
-function SummaryCard({ title, desc, value, smallTitle }: { title: string; desc?: string; value: number; smallTitle?: boolean }) {
-  return (
-    <div style={{ flex: 1, height: 230, background: colors.summaryCardBg, borderRadius: 8, padding: "22px 24px", display: "flex", flexDirection: "column" }}>
-      <span style={{ fontWeight: 600, fontSize: smallTitle ? 20 : 22, lineHeight: smallTitle ? 1.15 : undefined, color: "#1f1f1f" }}>
-        {title}
-      </span>
-      {desc && <span style={{ marginTop: 8, fontWeight: 400, fontSize: 12, color: "#5a5a5a", lineHeight: 1.35 }}>{desc}</span>}
-      <span style={{ marginTop: "auto", fontWeight: 400, fontSize: smallTitle ? 60 : 64, color: "#1a1a1a", lineHeight: 1 }}>{value}</span>
     </div>
   );
 }

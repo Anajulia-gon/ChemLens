@@ -100,7 +100,7 @@ export function DesenhoTab({ onComingSoon }: DesenhoTabProps) {
           transition: "background .15s",
         }}
       >
-        <span style={{ fontWeight: 500, fontSize: 16, color: colors.secondarySendText }}>Enviar</span>
+        <span style={{ fontWeight: 500, fontSize: 18, color: colors.secondarySendText }}>Submit</span>
       </div>
     </div>
   );

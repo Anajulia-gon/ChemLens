@@ -1,16 +1,15 @@
 """
-Classificação de solubilidade e geração do alerta de confiabilidade.
+Solubility classification and reliability-alert generation.
 
-Portado de toolsinterface.py::classify_solubility_dataset / generate_status,
-adaptado para operar por molécula (em vez de num DataFrame inteiro) e com as
-mensagens localizadas em pt-BR.
+Ported from toolsinterface.py::classify_solubility_dataset / generate_status,
+adapted to operate per-molecule (instead of over a whole DataFrame).
 """
 from __future__ import annotations
 
 from domain import SOLUBILITY_LIMITS
 
-# Mapeia o alerta de confiabilidade (3 categorias) para o status de 3 níveis
-# usado pela tabela/UI (mesmas cores do Claude Design: verde/laranja/vermelho).
+# Maps the reliability alert (3 categories) to the 3-level status used by the
+# table/UI (same colors as the Claude Design: green/orange/red).
 STATUS_BY_ALERT = {
     "HIGH PREDICTIVE RELIABILITY": "High Confidence",
     "MODERATE PREDICTIVE RELIABILITY": "Review Suggested",
@@ -26,6 +25,19 @@ def map_logs_class(logs_value: float) -> str:
     return SOLUBILITY_LIMITS[float("-inf")]
 
 
+def build_class_tag(pred_class: str, lower_class: str, upper_class: str) -> str:
+    """Rótulo 'de X a Y' descrevendo as classes de solubilidade cobertas pelo
+    intervalo de confiança — mesma lógica de `class_tag` em
+    toolsinterface.py::classify_solubility_dataset/generate_status."""
+    if lower_class == upper_class:
+        return pred_class
+    if pred_class != lower_class:
+        if lower_class == "Low Solubility":
+            return f"{pred_class} to Insoluble"
+        return f"{pred_class} to {lower_class}"
+    return pred_class
+
+
 def generate_status(logs_pred: float, lower_bound: float, upper_bound: float) -> dict:
     pred_class = map_logs_class(logs_pred)
     lower_class = map_logs_class(lower_bound)
@@ -34,29 +46,30 @@ def generate_status(logs_pred: float, lower_bound: float, upper_bound: float) ->
     if lower_class == upper_class:
         alert_name = "HIGH PREDICTIVE RELIABILITY"
         description = (
-            f"A IA prevê {logs_pred:.2f}. A margem de erro permanece dentro da mesma classe de "
-            f"solubilidade ({pred_class}). A molécula deve se comportar como esperado em ensaios biológicos."
+            f"The AI predicts {logs_pred:.2f}. The error margin stays within the same solubility "
+            f"class ({pred_class}). This molecule should behave as expected in biological assays."
         )
     elif pred_class != lower_class:
         if lower_class == "Low Solubility":
             alert_name = "INSOLUBILITY RISK"
             description = (
-                f"A IA prevê {logs_pred:.2f} ({pred_class}), mas a margem de erro alcança a zona crítica "
-                f"de insolubilidade. Validação experimental é recomendada."
+                f"The AI predicts {logs_pred:.2f} ({pred_class}), but the error margin reaches the "
+                f"critical insolubility zone. Experimental validation is recommended."
             )
         else:
             alert_name = "FORMULATION IMPACT"
             description = (
-                f"A IA prevê {logs_pred:.2f} ({pred_class}) e tem uma margem de erro que se estende até "
-                f"a classe '{lower_class}'."
+                f"The AI predicts {logs_pred:.2f} ({pred_class}) with an error margin that extends "
+                f"into the '{lower_class}' class."
             )
     else:
         alert_name = "MODERATE PREDICTIVE RELIABILITY"
-        description = "A margem de erro sugere cautela na interpretação inicial para ensaios biológicos."
+        description = "The error margin suggests caution when interpreting this prediction for biological assays."
 
     return {
         "pred_class": pred_class,
         "alert_name": alert_name,
         "description": description,
         "status": STATUS_BY_ALERT[alert_name],
+        "class_tag": build_class_tag(pred_class, lower_class, upper_class),
     }

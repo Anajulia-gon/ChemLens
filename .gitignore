@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.DS_Store
+node_modules/
+
+# Artefatos de treino/experimentos grandes demais para o Git (GitHub bloqueia
+# qualquer blob > 100MB) — ficam só localmente, pipeline.py os lê do disco.
+# Os modelos realmente usados pela API vivem em backend/models/ (bem menores,
+# gerados por backend/train_models.py) e continuam versionados normalmente.
+/model_external_run_1.joblib
+/modelo_rf_159rdkit.joblib
+/scaler_159rdkiy.joblib
+/scaler_external_run_1.joblib

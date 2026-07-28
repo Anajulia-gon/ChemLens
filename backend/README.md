@@ -40,8 +40,19 @@ python train_models.py
 uvicorn app:app --port 8000
 ```
 
-Endpoints: `GET /health`, `POST /predict` (ver `app.py`). CORS liberado para
-`http://localhost:3000` (o frontend Next.js).
+Endpoints: `GET /health`, `POST /predict`, `GET /studies`, `GET /studies/{id}`,
+`DELETE /studies/{id}` (ver `app.py`). CORS liberado para `http://localhost:3000`
+(o frontend Next.js).
+
+## Persistência dos estudos
+
+Cada `POST /predict` já salva o resultado em `studies/<id>.json` (um arquivo
+por estudo — ver `storage.py`). O frontend carrega a lista automaticamente ao
+abrir (`GET /studies`), busca o estudo completo só quando reaberto
+(`GET /studies/{id}`), e apaga de verdade com `DELETE /studies/{id}`. Não é
+mais preciso reprocessar nada ao reabrir o app — os dados sobrevivem a
+recarregar a página. `studies/` não é versionado (é dado do usuário, não
+código).
 
 ## Estrutura
 
@@ -50,5 +61,7 @@ Endpoints: `GET /health`, `POST /predict` (ver `app.py`). CORS liberado para
 - `chemistry.py` — alertas PAINS/Brenk, átomos tóxicos, regras de leadlikeness.
 - `conformal.py` — `ConformalPredictorESD` (portado de toolsinterface.py).
 - `classification.py` — classificação de solubilidade + alerta de confiabilidade.
+- `novelty.py` — detecta se o SMILES é "inédito" (fora do dataset de treino/`models/known_smiles.json`).
+- `storage.py` — salva/lista/carrega/apaga estudos em `studies/*.json`.
 - `train_models.py` — treina e salva os artefatos em `models/`.
 - `app.py` — API FastAPI.

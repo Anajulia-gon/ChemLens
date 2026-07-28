@@ -32,7 +32,11 @@ export interface MoleculeResult {
   status: ReliabilityStatus;
   predictedClass: string;
   predictedClassLabel: string;
+  classTag: string;
+  alertName: string;
+  alertDescription: string;
   descriptors: MoleculeDescriptors;
+  isNovel: boolean;
   alerts: MoleculeAlert[];
 }
 
@@ -48,7 +52,17 @@ export interface RadarRange {
   max: number;
 }
 
-export interface PredictionResponse {
+/** Metadados de um estudo salvo — o que aparece na lista de histórico. */
+export interface StudyMeta {
+  id: number;
+  num: number;
+  date: string;
+  molCount: number;
+}
+
+/** Um estudo completo, como salvo em disco (backend/studies/<id>.json) e
+ * devolvido por /predict e /studies/{id}. */
+export interface PredictionResponse extends StudyMeta {
   results: MoleculeResult[];
   invalid: InvalidMolecule[];
   radarAxes: string[];

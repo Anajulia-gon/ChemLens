@@ -56,8 +56,8 @@ export function SmilesTab({ molecules, onAddMolecules, onRemoveMolecule, onSubmi
           <input
             ref={inputRef}
             onKeyDown={handleKeyDown}
-            placeholder="Escreva um ou mais smiles aqui..."
-            style={{ flexGrow: 1, border: "none", background: "transparent", fontSize: 16, color: colors.cardTitle, height: "100%" }}
+            placeholder="Type one or more SMILES here..."
+            style={{ flexGrow: 1, border: "none", background: "transparent", fontSize: 18, color: colors.cardTitle, height: "100%" }}
           />
         </div>
         <div
@@ -78,7 +78,7 @@ export function SmilesTab({ molecules, onAddMolecules, onRemoveMolecule, onSubmi
           }}
         >
           <PlusIcon />
-          <span style={{ fontWeight: 500, fontSize: 16, color: colors.white }}>Adicionar</span>
+          <span style={{ fontWeight: 500, fontSize: 18, color: colors.white }}>Add</span>
         </div>
       </div>
 
@@ -96,11 +96,11 @@ export function SmilesTab({ molecules, onAddMolecules, onRemoveMolecule, onSubmi
           }}
         >
           <MoleculeGlyph size={42} color={colors.emptyIcon} />
-          <span style={{ fontWeight: 500, fontSize: 19, color: colors.emptyTitle, whiteSpace: "nowrap" }}>
-            Suas moléculas vão aparecer aqui
+          <span style={{ fontWeight: 500, fontSize: 18, color: colors.emptyTitle, whiteSpace: "nowrap" }}>
+            Your molecules will show up here
           </span>
-          <span style={{ fontWeight: 400, fontSize: 13, color: colors.emptySubtitle, textAlign: "center", lineHeight: 1.45 }}>
-            Cole um SMILES acima, desenhe uma estrutura ou carregue um arquivo
+          <span style={{ fontWeight: 400, fontSize: 14, color: colors.emptySubtitle, textAlign: "center", lineHeight: 1.45 }}>
+            Paste a SMILES above, draw a structure, or upload a file
           </span>
         </div>
       )}
@@ -146,7 +146,7 @@ export function SmilesTab({ molecules, onAddMolecules, onRemoveMolecule, onSubmi
               transition: "opacity .15s",
             }}
           >
-            <span style={{ fontWeight: 600, fontSize: 16, color: colors.white }}>Enviar para predição</span>
+            <span style={{ fontWeight: 600, fontSize: 18, color: colors.white }}>Submit for prediction</span>
             <ArrowRightIcon />
           </div>
         </>

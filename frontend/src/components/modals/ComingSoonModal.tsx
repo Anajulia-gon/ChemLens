@@ -14,8 +14,8 @@ export function ComingSoonModal({ actionLabel, onClose }: ComingSoonModalProps) 
     <MessageModal
       isOpen={!!actionLabel}
       icon={<ClockIcon size={36} color={colors.white} strokeWidth={1.6} />}
-      title="Em breve"
-      message={`A ação "${actionLabel}" ainda não está disponível. Estamos trabalhando nisso — em breve por aqui.`}
+      title="Coming soon"
+      message={`The "${actionLabel}" action isn't available yet. We're working on it — coming soon.`}
       onClose={onClose}
     />
   );

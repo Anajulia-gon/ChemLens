@@ -1,43 +1,53 @@
 "use client";
 
-import { colors } from "@/lib/theme";
+import { codGray, colors } from "@/lib/theme";
 import { structureImageUrl } from "@/lib/molecules";
 import { useResolvedName } from "@/hooks/useResolvedName";
 import type { MoleculeResult, RadarRange } from "@/types/prediction";
-import { ArrowLeftIcon } from "../icons";
-import { RadarChart } from "./RadarChart";
+import { InfoIcon } from "../InfoIcon";
+import { RadarChart, RadarLegend } from "./RadarChart";
+import { UncertaintyChart } from "./UncertaintyChart";
 
 interface DetailPanelProps {
   molecule: MoleculeResult | null;
   radarAxes: string[];
   radarRanges: Record<string, RadarRange>;
-  isClosing: boolean;
-  onClose: () => void;
   onOpenImage: () => void;
   onOpenRadar: () => void;
 }
 
-const AXIS_MIN = -8;
-const AXIS_MAX = 2;
-const AXIS_SPAN = AXIS_MAX - AXIS_MIN;
-const TICKS = [-8, -6, -4, -2, 0, 2];
-
-function clamp(x: number) {
-  return Math.max(0, Math.min(100, x));
+interface DescriptorRow {
+  key: string;
+  label: string;
+  info: string;
+  integer?: boolean;
 }
 
-function axisPct(value: number) {
-  return clamp(((value - AXIS_MIN) / AXIS_SPAN) * 100);
-}
+// Mesmo conjunto e ordem dos eixos do radar (ver backend/domain.py RADAR_AXES),
+// com o texto exato de cada popover "i" conforme especificado.
+const DESCRIPTOR_ROWS: DescriptorRow[] = [
+  { key: "MolWt", label: "MW", info: "Molecular weight of the compound. Optimal: 100~500" },
+  { key: "nRig", label: "nRig", info: "Number of rigid bonds in the molecule. Optimal: 0~30", integer: true },
+  { key: "fChar", label: "FCharge", info: "Total formal charge of the molecule. Optimal: -2~2", integer: true },
+  { key: "NumHeteroatoms", label: "nHet", info: "Number of heteroatoms (non-carbon, non-hydrogen atoms). Optimal: 1~15", integer: true },
+  { key: "MaxRing", label: "MaxRing", info: "Number of atoms in the biggest ring. Optimal: 0~18", integer: true },
+  { key: "RingCount", label: "nRing", info: "Total number of rings in the molecule. Optimal: 0~6", integer: true },
+  { key: "NumRotatableBonds", label: "nRot", info: "Number of rotatable bonds. Optimal: 0~10", integer: true },
+  { key: "TPSA", label: "TPSA", info: "Topological polar surface area. Optimal: 0~140" },
+  { key: "NHOHCount", label: "nHD", info: "Number of hydrogen bond donors (NH and OH groups). Optimal: 0~5", integer: true },
+  { key: "nHA", label: "nHA", info: "Number of hydrogen bond acceptors. Optimal: 0~12", integer: true },
+  { key: "MolLogP", label: "LogP", info: "Octanol-water partition coefficient (lipophilicity). Optimal: 0~5" },
+  {
+    key: "logS",
+    label: "LogS",
+    info: "Base-10 logarithm machine learning estimation of aqueous solubility with calculated confidence interval. See documentation for more details",
+  },
+];
 
-export function DetailPanel({ molecule, radarAxes, radarRanges, isClosing, onClose, onOpenImage, onOpenRadar }: DetailPanelProps) {
+export function DetailPanel({ molecule, radarAxes, radarRanges, onOpenImage, onOpenRadar }: DetailPanelProps) {
   const displayName = useResolvedName(molecule?.smiles ?? "", molecule?.name ?? "");
 
   if (!molecule) return null;
-
-  const markLeft = axisPct(molecule.logS);
-  const bandLeft = axisPct(molecule.lowerBound);
-  const bandRight = axisPct(molecule.upperBound);
 
   return (
     <div
@@ -54,221 +64,179 @@ export function DetailPanel({ molecule, radarAxes, radarRanges, isClosing, onClo
         overflowY: "auto",
         zIndex: 40,
         willChange: "transform, opacity",
-        animation: isClosing ? "detailOut .22s ease forwards" : "detailIn .3s cubic-bezier(.22,.61,.36,1)",
+        animation: "detailIn .3s cubic-bezier(.22,.61,.36,1)",
       }}
     >
-      <div
-        onClick={onClose}
-        onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.65")}
-        onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
-        style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", marginBottom: 18, width: "fit-content" }}
-      >
-        <ArrowLeftIcon />
-        <span style={{ fontSize: 16, color: colors.tabIdleText }}>Voltar</span>
-      </div>
-
       <div style={{ display: "flex", gap: 16, animation: "infoUp .4s ease .05s both" }}>
-        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 16 }}>
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <div
+              style={{
+                position: "relative",
+                height: 120,
+                background: colors.white,
+                borderRadius: "10px 10px 0 0",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                overflow: "hidden",
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={structureImageUrl(molecule.smiles)}
+                alt=""
+                style={{ width: "100%", height: "100%", objectFit: "contain", padding: 14, boxSizing: "border-box" }}
+              />
+              <ExpandButton onClick={onOpenImage} />
+            </div>
+            <div
+              style={{
+                height: 52,
+                boxSizing: "border-box",
+                background: colors.detailFooterBg,
+                borderRadius: "0 0 10px 10px",
+                padding: "8px 14px",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+              }}
+            >
+              <div
+                style={{
+                  fontWeight: 600,
+                  fontSize: 14,
+                  color: colors.cardTitle,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {displayName}
+              </div>
+              <div
+                style={{
+                  fontFamily: "monospace",
+                  fontSize: 11,
+                  color: codGray[500],
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {molecule.smiles}
+              </div>
+            </div>
+          </div>
+
           <div
             style={{
               position: "relative",
-              height: 220,
-              background: colors.white,
-              borderRadius: "10px 10px 0 0",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              overflow: "hidden",
-            }}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={structureImageUrl(molecule.smiles)}
-              alt=""
-              style={{ width: "100%", height: "100%", objectFit: "contain", padding: 14, boxSizing: "border-box" }}
-            />
-            <ExpandButton onClick={onOpenImage} />
-          </div>
-          <div
-            style={{
-              height: 52,
-              boxSizing: "border-box",
-              background: colors.detailFooterBg,
-              borderRadius: "0 0 10px 10px",
-              padding: "8px 14px",
+              height: 480,
+              borderRadius: 10,
+              padding: "10px 6px 6px",
               display: "flex",
               flexDirection: "column",
-              justifyContent: "center",
-            }}
-          >
-            <div
-              style={{
-                fontWeight: 600,
-                fontSize: 15,
-                color: colors.cardTitle,
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
-              {displayName}
-            </div>
-            <div
-              style={{
-                fontFamily: "monospace",
-                fontSize: 11,
-                color: "#7a7a7a",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
-              {molecule.smiles}
-            </div>
-          </div>
-        </div>
-
-        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
-          <div
-            style={{
-              position: "relative",
-              height: 220,
-              borderRadius: "10px 10px 0 0",
-              padding: 6,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
               overflow: "hidden",
               backgroundColor: colors.white,
             }}
           >
-            <RadarChart descriptors={molecule.descriptors} axes={radarAxes} ranges={radarRanges} />
+            <div style={{ paddingLeft: 6 }}>
+              <RadarLegend />
+            </div>
+            <div style={{ position: "relative", flex: 1, minHeight: 0 }}>
+              <RadarChart descriptors={molecule.descriptors} axes={radarAxes} ranges={radarRanges} />
+            </div>
             <ExpandButton onClick={onOpenRadar} />
           </div>
+        </div>
+
+        <div
+          style={{
+            flex: 1,
+            minWidth: 0,
+            background: colors.white,
+            borderRadius: 10,
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+          }}
+        >
           <div
             style={{
-              height: 52,
-              boxSizing: "border-box",
-              background: colors.detailFooterBg,
-              borderTop: "1px solid #c2c2c2",
-              borderRadius: "0 0 10px 10px",
-              padding: "8px 14px",
-              display: "flex",
-              alignItems: "center",
-              fontWeight: 500,
+              padding: "12px 16px",
+              background: colors.tableHeaderBg,
+              fontWeight: 600,
               fontSize: 14,
-              color: colors.tabIdleText,
+              color: codGray[800],
+              flexShrink: 0,
             }}
           >
-            Physical Chemical properties
+            Physicochemical properties
+          </div>
+          <div style={{ flex: 1, minHeight: 0, overflowY: "auto", display: "flex", flexDirection: "column" }}>
+            {DESCRIPTOR_ROWS.map((row) => {
+              const value = molecule.descriptors[row.key];
+              const formatted = row.integer ? Math.round(value).toString() : value.toFixed(2);
+              return (
+                <div
+                  key={row.key}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    flex: 1,
+                    minHeight: 32,
+                    padding: "0 16px",
+                    borderBottom: `1px solid ${colors.tableDividerRow}`,
+                    fontSize: 14,
+                  }}
+                >
+                  <span style={{ color: colors.tabIdleText, fontWeight: 500 }}>{row.label}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ color: codGray[800], fontWeight: 600 }}>{formatted}</span>
+                    <InfoIcon text={row.info} />
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
 
-      <div
-        style={{
-          marginTop: 28,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          animation: "infoUp .4s ease .12s both",
-        }}
-      >
-        <span style={{ fontWeight: 600, fontSize: 16, color: colors.tabIdleText }}>Solubilidade aquosa</span>
-        <div style={{ background: colors.buttonSecondary, borderRadius: 8, padding: "8px 16px", fontSize: 14, color: colors.tabIdleText }}>
-          {molecule.predictedClassLabel}
-        </div>
+      <div style={{ marginTop: 28, animation: "infoUp .4s ease .12s both" }}>
+        <span style={{ fontWeight: 600, fontSize: 18, color: colors.tabIdleText }}>LogS</span>
       </div>
       <div style={{ marginTop: 4, display: "flex", alignItems: "baseline", gap: 14 }}>
-        <span style={{ fontWeight: 800, fontSize: 84, color: "#1a1a1a", lineHeight: 1 }}>{molecule.logS.toFixed(2)}</span>
-        <span style={{ fontWeight: 400, fontSize: 34, color: "#2a2a2a" }}>± {molecule.margin.toFixed(2)} logS</span>
+        <span style={{ fontWeight: 800, fontSize: 83, color: codGray[900], lineHeight: 1 }}>{molecule.logS.toFixed(2)}</span>
+        <span style={{ fontWeight: 400, fontSize: 34, color: codGray[800] }}>± {molecule.margin.toFixed(2)}</span>
       </div>
 
       <div style={{ marginTop: 30 }}>
-        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 16 }}>
-          <span style={{ fontWeight: 600, fontSize: 15, color: colors.tabIdleText }}>Quantificação de incerteza</span>
-          <span style={{ fontSize: 13, color: colors.emptySubtitle }}>Margem cromatizada ao risco</span>
-        </div>
-        <div style={{ position: "relative", marginTop: 54, height: 26 }}>
-          <div style={{ position: "absolute", left: 0, right: 0, top: 12, height: 2, background: colors.detailUncertaintyLine }} />
-          <div
-            style={{
-              position: "absolute",
-              top: 0,
-              height: 26,
-              borderRadius: 8,
-              background: colors.detailBandBg,
-              border: `1px solid ${colors.detailBandBorder}`,
-              left: `${bandLeft}%`,
-              width: `${bandRight - bandLeft}%`,
-            }}
-          />
-          <div
-            style={{
-              position: "absolute",
-              top: -8,
-              height: 42,
-              width: 2,
-              background: colors.detailMarker,
-              borderRadius: 2,
-              left: `${markLeft}%`,
-            }}
-          />
-          <div
-            style={{
-              position: "absolute",
-              bottom: 34,
-              left: `${markLeft}%`,
-              transform: "translateX(-50%)",
-              fontSize: 13,
-              color: colors.detailMarker,
-              whiteSpace: "nowrap",
-            }}
-          >
-            {molecule.logS.toFixed(2)} logS
-          </div>
-        </div>
-        <div style={{ position: "relative", marginTop: 14, height: 16 }}>
-          {TICKS.map((v) => (
-            <div
-              key={v}
-              style={{
-                position: "absolute",
-                transform: "translateX(-50%)",
-                left: `${axisPct(v)}%`,
-                fontSize: 12,
-                color: colors.emptySubtitle,
-              }}
-            >
-              {v > 0 ? `+${v}` : v}
-            </div>
-          ))}
-        </div>
-        <div style={{ marginTop: 12, display: "flex", justifyContent: "space-between", fontSize: 12.5, color: "#a8a8a8" }}>
-          <span>← menos solúvel</span>
-          <span>mais solúvel →</span>
-        </div>
+        <UncertaintyChart
+          logS={molecule.logS}
+          lowerBound={molecule.lowerBound}
+          upperBound={molecule.upperBound}
+          classTag={molecule.classTag}
+        />
       </div>
 
-      <div style={{ marginTop: 38, animation: "infoUp .4s ease .19s both" }}>
-        <span style={{ fontWeight: 700, fontSize: 28, color: "#1a1a1a" }}>Alarmes e riscos</span>
-        {molecule.alerts.length > 0 ? (
-          <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 12 }}>
-            {molecule.alerts.map((alert, i) => (
-              <div key={i} style={{ background: colors.alertCardBg, borderRadius: 8, padding: "14px 16px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <span style={{ color: "#2a2a2a", fontSize: 13 }}>◆</span>
-                  <span style={{ fontWeight: 600, fontSize: 15, color: colors.cardTitle }}>{alert.key}</span>
-                </div>
-                <div style={{ marginTop: 6, fontSize: 13, color: "#565656", lineHeight: 1.4 }}>{alert.val}</div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div style={{ marginTop: 16, fontSize: 15, color: colors.tabIdleText }}>
-            Nenhum alerta — molécula dentro do domínio do modelo.
-          </div>
-        )}
+      <div style={{ marginTop: 26, animation: "infoUp .4s ease .16s both" }}>
+        <span
+          style={{
+            display: "inline-block",
+            background: colors.buttonSecondary,
+            color: colors.tabIdleText,
+            fontWeight: 700,
+            fontSize: 14,
+            padding: "8px 18px",
+            borderRadius: 999,
+            whiteSpace: "nowrap",
+          }}
+        >
+          {molecule.alertName}
+        </span>
+        <div style={{ marginTop: 10, fontSize: 14, color: codGray[700], lineHeight: 1.5 }}>{molecule.alertDescription}</div>
       </div>
     </div>
   );
@@ -278,14 +246,14 @@ function ExpandButton({ onClick }: { onClick: () => void }) {
   return (
     <div
       onClick={onClick}
-      title="Ampliar"
+      title="Expand"
       onMouseEnter={(e) => {
-        e.currentTarget.style.background = "#fff";
-        e.currentTarget.style.color = "#1a1a1a";
+        e.currentTarget.style.background = colors.white;
+        e.currentTarget.style.color = codGray[900];
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.background = "rgba(255,255,255,0.85)";
-        e.currentTarget.style.color = "#4a4a4a";
+        e.currentTarget.style.color = codGray[600];
       }}
       style={{
         position: "absolute",
@@ -299,8 +267,8 @@ function ExpandButton({ onClick }: { onClick: () => void }) {
         alignItems: "center",
         justifyContent: "center",
         cursor: "pointer",
-        color: "#4a4a4a",
-        fontSize: 32,
+        color: codGray[600],
+        fontSize: 34,
         lineHeight: "16px",
         boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
       }}

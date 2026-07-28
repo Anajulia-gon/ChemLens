@@ -1,8 +1,10 @@
 "use client";
 
-import { colors } from "@/lib/theme";
+import { useState } from "react";
+import { createPortal } from "react-dom";
+import { codGray, colors } from "@/lib/theme";
 import type { MoleculeResult, RadarRange } from "@/types/prediction";
-import { RadarChart } from "./RadarChart";
+import { RadarChart, RadarLegend, type RadarSeriesKey } from "./RadarChart";
 
 interface RadarModalProps {
   molecule: MoleculeResult | null;
@@ -12,9 +14,20 @@ interface RadarModalProps {
 }
 
 export function RadarModal({ molecule, radarAxes, radarRanges, onClose }: RadarModalProps) {
-  if (!molecule) return null;
+  const [highlight, setHighlight] = useState<RadarSeriesKey | null>(null);
+  const [lastMoleculeId, setLastMoleculeId] = useState<number | null | undefined>(molecule?.id);
 
-  return (
+  // Reseta o destaque ao trocar de molécula ou fechar/reabrir o modal.
+  if (molecule?.id !== lastMoleculeId) {
+    setLastMoleculeId(molecule?.id);
+    setHighlight(null);
+  }
+
+  if (!molecule || typeof document === "undefined") return null;
+
+  const toggleHighlight = (key: RadarSeriesKey) => setHighlight((prev) => (prev === key ? null : key));
+
+  return createPortal(
     <div
       onClick={onClose}
       style={{
@@ -39,16 +52,16 @@ export function RadarModal({ molecule, radarAxes, radarRanges, onClose }: RadarM
         }}
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-          <span style={{ fontWeight: 600, fontSize: 18, color: colors.cardTitle }}>Physical Chemical properties</span>
+          <span style={{ fontWeight: 600, fontSize: 18, color: colors.cardTitle }}>Physicochemical properties</span>
           <div
             onClick={onClose}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = "#ececec";
-              e.currentTarget.style.color = "#1a1a1a";
+              e.currentTarget.style.background = codGray[200];
+              e.currentTarget.style.color = codGray[900];
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.background = "transparent";
-              e.currentTarget.style.color = "#6a6a6a";
+              e.currentTarget.style.color = codGray[500];
             }}
             style={{
               width: 32,
@@ -58,17 +71,21 @@ export function RadarModal({ molecule, radarAxes, radarRanges, onClose }: RadarM
               alignItems: "center",
               justifyContent: "center",
               cursor: "pointer",
-              color: "#6a6a6a",
-              fontSize: 20,
+              color: codGray[500],
+              fontSize: 22,
             }}
           >
             ×
           </div>
         </div>
-        <div style={{ width: "100%", height: 560, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <RadarChart descriptors={molecule.descriptors} axes={radarAxes} ranges={radarRanges} />
+        <div style={{ paddingLeft: 4, marginBottom: 4 }}>
+          <RadarLegend activeKey={highlight} onSelect={toggleHighlight} />
+        </div>
+        <div style={{ width: "100%", height: 540, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <RadarChart descriptors={molecule.descriptors} axes={radarAxes} ranges={radarRanges} highlight={highlight} />
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

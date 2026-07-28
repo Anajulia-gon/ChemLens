@@ -47,7 +47,7 @@ export function HistoryModal({ isOpen, studies, activeStudyId, onClose, onOpenSt
       >
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <BookIcon size={26} color={colors.ink} strokeWidth={1.6} />
-          <span style={{ fontWeight: 600, fontSize: 24, color: colors.ink }}>Histórico de estudos</span>
+          <span style={{ fontWeight: 600, fontSize: 22, color: colors.ink }}>Study history</span>
         </div>
 
         {studies.length > 0 ? (
@@ -72,16 +72,16 @@ export function HistoryModal({ isOpen, studies, activeStudyId, onClose, onOpenSt
                 }}
               >
                 <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                  <span style={{ fontWeight: 600, fontSize: 16, color: colors.cardTitle }}>
-                    Estudo {study.num}
+                  <span style={{ fontWeight: 600, fontSize: 18, color: colors.cardTitle }}>
+                    Study {study.num}
                   </span>
-                  <span style={{ fontWeight: 400, fontSize: 13, color: colors.fileRemoveText }}>
-                    {study.date} · {study.molCount === 1 ? "1 molécula" : `${study.molCount} moléculas`}
+                  <span style={{ fontWeight: 400, fontSize: 14, color: colors.fileRemoveText }}>
+                    {study.date} · {study.molCount === 1 ? "1 molecule" : `${study.molCount} molecules`}
                   </span>
                 </div>
                 <button
                   type="button"
-                  title="Apagar estudo"
+                  title="Delete study"
                   onClick={(e) => {
                     e.stopPropagation();
                     onAskDelete(study.id);
@@ -111,14 +111,14 @@ export function HistoryModal({ isOpen, studies, activeStudyId, onClose, onOpenSt
           <span
             style={{
               fontWeight: 400,
-              fontSize: 15,
+              fontSize: 14,
               color: colors.emptySubtitle,
               padding: "24px 0",
               textAlign: "center",
               lineHeight: 1.5,
             }}
           >
-            Nenhum estudo salvo ainda. Envie moléculas para predição e seus estudos aparecerão aqui.
+            No studies saved yet. Submit molecules for prediction and your studies will show up here.
           </span>
         )}
       </div>

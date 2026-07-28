@@ -1,6 +1,6 @@
 "use client";
 
-import { colors } from "@/lib/theme";
+import { codGray, colors } from "@/lib/theme";
 import type { Study } from "@/hooks/useHistory";
 import { TrashIcon } from "../icons";
 
@@ -54,7 +54,7 @@ export function ConfirmDeleteModal({ study, onCancel, onConfirm }: ConfirmDelete
           <TrashIcon size={30} strokeWidth={1.7} />
         </div>
         <span style={{ fontWeight: 600, fontSize: 22, color: colors.ink, textAlign: "center" }}>
-          Apagar Estudo {study.num}?
+          Delete Study {study.num}?
         </span>
         <span
           style={{
@@ -65,18 +65,18 @@ export function ConfirmDeleteModal({ study, onCancel, onConfirm }: ConfirmDelete
             lineHeight: 1.5,
           }}
         >
-          Esta ação não pode ser desfeita. O estudo será removido permanentemente do histórico.
+          This action cannot be undone. The study will be permanently removed from the history.
         </span>
         <div style={{ display: "flex", gap: 12, width: "100%", marginTop: 4 }}>
           <div
             onClick={onCancel}
             onMouseEnter={(e) => (e.currentTarget.style.background = colors.buttonSecondaryHover)}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "#e6e6e6")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = codGray[200])}
             style={{
               flex: 1,
               height: 46,
               borderRadius: 12,
-              background: "#e6e6e6",
+              background: codGray[200],
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -84,7 +84,7 @@ export function ConfirmDeleteModal({ study, onCancel, onConfirm }: ConfirmDelete
               transition: "background .15s",
             }}
           >
-            <span style={{ fontWeight: 500, fontSize: 15, color: colors.tabIdleText }}>Cancelar</span>
+            <span style={{ fontWeight: 500, fontSize: 14, color: colors.tabIdleText }}>Cancel</span>
           </div>
           <div
             onClick={onConfirm}
@@ -102,7 +102,7 @@ export function ConfirmDeleteModal({ study, onCancel, onConfirm }: ConfirmDelete
               transition: "opacity .15s",
             }}
           >
-            <span style={{ fontWeight: 500, fontSize: 15, color: colors.white }}>Apagar</span>
+            <span style={{ fontWeight: 500, fontSize: 14, color: colors.white }}>Delete</span>
           </div>
         </div>
       </div>

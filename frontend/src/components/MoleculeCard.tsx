@@ -75,7 +75,7 @@ export function MoleculeCard({ molecule, onRemove }: MoleculeCardProps) {
               top: 22,
               width: 320,
               fontWeight: 600,
-              fontSize: 16,
+              fontSize: 18,
               color: colors.cardTitle,
               whiteSpace: "nowrap",
               overflow: "hidden",

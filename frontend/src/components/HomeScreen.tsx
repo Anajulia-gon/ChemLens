@@ -2,14 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import { colors } from "@/lib/theme";
-import { nameForSmiles, UNKNOWN_MOLECULE_NAME } from "@/lib/molecules";
+import { UNKNOWN_MOLECULE_NAME } from "@/lib/molecules";
 import { queueNameResolution } from "@/lib/nameResolver";
 import { parseMoleculesFromCsv } from "@/lib/csv";
 import { submitMoleculesForPrediction } from "@/lib/prediction";
 import { useHistory } from "@/hooks/useHistory";
 import type { Molecule } from "@/types/molecule";
 import type { InvalidMolecule } from "@/types/prediction";
-import { AlertIcon, GraduationCapIcon, ClockIcon } from "./icons";
+import { AlertIcon, GraduationCapIcon, ClockIcon, Spinner } from "./icons";
 import { TabBar } from "./TabBar";
 import { StepsPanel } from "./StepsPanel";
 import { CollapsedSidebar } from "./CollapsedSidebar";
@@ -26,7 +26,7 @@ import { ResultsDashboard } from "./results/ResultsDashboard";
 
 export type ActiveTab = "smiles" | "arquivo" | "desenho";
 export type FileStage = "idle" | "loading" | "done";
-export type Stage = "input" | "loading" | "results";
+export type Stage = "input" | "loading" | "opening" | "results";
 
 const CANVAS_WIDTH = 1920;
 const CANVAS_HEIGHT = 1080;
@@ -37,12 +37,12 @@ const CANVAS_HEIGHT = 1080;
 // penúltima etapa enquanto espera o backend responder e só chega a 100%
 // quando a resposta realmente chega.
 const PIPELINE_STEPS = [
-  { p: 10, label: "Validando estrutura SMILES..." },
-  { p: 25, label: "Filtrando compostos e tratando exceções..." },
-  { p: 45, label: "Gerando descritores moleculares (RDKit)..." },
-  { p: 65, label: "Aplicando o scaler e o modelo primário (stacking + Lasso)..." },
-  { p: 82, label: "Estimando o erro do modelo (Random Forest)..." },
-  { p: 92, label: "Calculando margem conformal (UQ, 90% de confiança)..." },
+  { p: 10, label: "Validating SMILES structure..." },
+  { p: 25, label: "Filtering compounds and handling exceptions..." },
+  { p: 45, label: "Generating molecular descriptors (RDKit)..." },
+  { p: 65, label: "Applying the scaler and the primary model (stacking + Lasso)..." },
+  { p: 82, label: "Estimating the model's error (Random Forest)..." },
+  { p: 92, label: "Computing the conformal margin (UQ, 90% confidence)..." },
 ];
 
 const MAX_LISTED_INVALID = 5;
@@ -53,10 +53,10 @@ function describeInvalidMolecules(invalid: InvalidMolecule[]): { title: string; 
     .map((m) => `${m.name || m.smiles} (${m.reason})`)
     .join("; ");
   const rest = invalid.length - MAX_LISTED_INVALID;
-  const suffix = rest > 0 ? ` e mais ${rest}` : "";
+  const suffix = rest > 0 ? ` and ${rest} more` : "";
   return {
-    title: invalid.length === 1 ? "1 molécula ignorada" : `${invalid.length} moléculas ignoradas`,
-    message: `${items}${suffix}. As demais moléculas do estudo foram processadas normalmente.`,
+    title: invalid.length === 1 ? "1 molecule skipped" : `${invalid.length} molecules skipped`,
+    message: `${items}${suffix}. The rest of the study's molecules were processed normally.`,
   };
 }
 
@@ -102,9 +102,11 @@ export function HomeScreen() {
   const addMolecules = (smilesList: string[]) => {
     setMolecules((prev) => [
       ...prev,
-      ...smilesList.map((smiles) => ({ id: ++seqRef.current, smiles, name: nameForSmiles(smiles) })),
+      ...smilesList.map((smiles) => ({ id: ++seqRef.current, smiles, name: UNKNOWN_MOLECULE_NAME })),
     ]);
-    queueNameResolution(smilesList.filter((smiles) => nameForSmiles(smiles) === UNKNOWN_MOLECULE_NAME));
+    // Nome final sempre vem da API — o dicionário local só serve de placeholder
+    // instantâneo enquanto a resolução acontece em segundo plano.
+    queueNameResolution(smilesList);
   };
 
   const removeMolecule = (id: number) => {
@@ -132,9 +134,9 @@ export function HomeScreen() {
       const payload = await submitMoleculesForPrediction({ molecules });
       if (progressTimerRef.current) clearInterval(progressTimerRef.current);
       setLoadingProgress(100);
-      setLoadingLabel("Pronto!");
+      setLoadingLabel("Done!");
 
-      const newId = history.addStudy(payload.results.length, payload);
+      const newId = history.registerStudy(payload);
 
       setTimeout(() => {
         setActiveStudyId(newId);
@@ -145,11 +147,11 @@ export function HomeScreen() {
       if (progressTimerRef.current) clearInterval(progressTimerRef.current);
       setStage("input");
       setNotice({
-        title: "Falha na predição",
+        title: "Prediction failed",
         message:
           err instanceof Error
             ? err.message
-            : "Não foi possível rodar a predição. Verifique se o backend Python está rodando (uvicorn app:app --port 8000, na pasta backend/).",
+            : "Could not run the prediction. Make sure the Python backend is running (uvicorn app:app --port 8000, in the backend/ folder).",
       });
     }
   };
@@ -170,12 +172,11 @@ export function HomeScreen() {
       const parsedMolecules = parsed.map((p) => ({
         id: ++seqRef.current,
         smiles: p.smiles,
-        name: p.name?.trim() || nameForSmiles(p.smiles),
+        name: p.name?.trim() || UNKNOWN_MOLECULE_NAME,
       }));
       setMolecules(parsedMolecules);
-      queueNameResolution(
-        parsedMolecules.filter((m) => m.name === UNKNOWN_MOLECULE_NAME).map((m) => m.smiles)
-      );
+      // Nome final sempre vem da API, mesmo quando o CSV já trazia um nome.
+      queueNameResolution(parsedMolecules.map((m) => m.smiles));
       setFileProgress(100);
       setFileStage("done");
     };
@@ -201,29 +202,33 @@ export function HomeScreen() {
     setFormResetKey((k) => k + 1);
   };
 
-  const openStudy = (id: number) => {
-    if (!history.getResults(id)) {
-      history.close();
-      setNotice({
-        title: "Estudo indisponível",
-        message: "Os resultados desse estudo não estão mais disponíveis nesta sessão (não ficam salvos entre recarregamentos da página).",
-      });
-      return;
-    }
-    setActiveStudyId(id);
-    setStage("results");
+  const openStudy = async (id: number) => {
     history.close();
+    setStage("opening");
+    try {
+      await history.fetchResults(id);
+      setActiveStudyId(id);
+      setStage("results");
+    } catch (err) {
+      setStage("input");
+      setNotice({
+        title: "Could not open the study",
+        message:
+          err instanceof Error
+            ? err.message
+            : "Could not load this study. Make sure the backend is running.",
+      });
+    }
   };
 
-  const handleConfirmDelete = () => {
-    const deletingId = history.confirmDeleteId;
-    history.confirmDelete();
-    if (deletingId != null && deletingId === activeStudyId) {
+  const handleConfirmDelete = async () => {
+    const deletedId = await history.confirmDelete();
+    if (deletedId != null && deletedId === activeStudyId) {
       resetForm();
     }
   };
 
-  const activeResults = activeStudyId != null ? history.getResults(activeStudyId) : null;
+  const activeResults = activeStudyId != null ? history.getCachedResults(activeStudyId) : null;
   const deletingStudy = history.studies.find((s) => s.id === history.confirmDeleteId) ?? null;
   const isLoading = stage === "loading";
   const showCollapsedSidebar = stage !== "input";
@@ -279,7 +284,7 @@ export function HomeScreen() {
               }}
             >
               <GraduationCapIcon />
-              <span style={{ fontSize: 16, fontWeight: 500, color: colors.inkText }}>Novo estudo</span>
+              <span style={{ fontSize: 18, fontWeight: 500, color: colors.inkText }}>New study</span>
             </div>
 
             <div
@@ -305,7 +310,7 @@ export function HomeScreen() {
               }}
             >
               <ClockIcon />
-              <span style={{ fontSize: 16, fontWeight: 500, color: colors.tabIdleText }}>Histórico</span>
+              <span style={{ fontSize: 18, fontWeight: 500, color: colors.tabIdleText }}>History</span>
             </div>
 
             <div style={{ position: "absolute", left: 18, top: 190, width: 918, height: 1, background: colors.divider }} />
@@ -330,7 +335,16 @@ export function HomeScreen() {
                 onSubmit={handleSubmit}
               />
             )}
-            {activeTab === "desenho" && <DesenhoTab onComingSoon={() => openComingSoon("Desenho de estrutura")} />}
+            {activeTab === "desenho" && <DesenhoTab onComingSoon={() => openComingSoon("Structure drawing")} />}
+
+            <div style={{ position: "absolute", left: 1225, top: 100, width: 440 }}>
+              <span style={{ fontWeight: 400, fontSize: 18, color: colors.stepDesc, lineHeight: 1.55 }}>
+                This tool predicts key ADMET properties while assessing the reliability of each result for better
+                decision-making. Currently focused on logS, our Machine Learning platform estimates solubility and
+                clearly shows how much you can trust the numbers, automatically flagging compounds that fall outside
+                the applicability domain. Here is how to get started:
+              </span>
+            </div>
 
             <StepsPanel />
           </div>
@@ -349,8 +363,33 @@ export function HomeScreen() {
 
         {stage === "loading" && <LoadingScreen progress={loadingProgress} progressLabel={loadingLabel} />}
 
+        {stage === "opening" && (
+          <div
+            style={{
+              position: "absolute",
+              left: "50%",
+              top: "50%",
+              transform: "translate(-50%, -50%)",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 16,
+            }}
+          >
+            <Spinner size={32} color={colors.tabIdleText} />
+            <span style={{ fontSize: 18, color: colors.tabIdleText }}>Opening study...</span>
+          </div>
+        )}
+
         {stage === "results" && activeResults && (
-          <ResultsDashboard results={activeResults.results} radarAxes={activeResults.radarAxes} radarRanges={activeResults.radarRanges} />
+          <ResultsDashboard
+            studyId={activeResults.id}
+            results={activeResults.results}
+            radarAxes={activeResults.radarAxes}
+            radarRanges={activeResults.radarRanges}
+            onMoleculesDeleted={history.applyStudyUpdate}
+            onError={(message) => setNotice({ title: "Something went wrong", message })}
+          />
         )}
       </div>
 

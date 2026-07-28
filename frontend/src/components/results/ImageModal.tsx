@@ -1,6 +1,7 @@
 "use client";
 
-import { colors } from "@/lib/theme";
+import { createPortal } from "react-dom";
+import { codGray, colors } from "@/lib/theme";
 import { structureImageUrl } from "@/lib/molecules";
 import { useResolvedName } from "@/hooks/useResolvedName";
 import type { MoleculeResult } from "@/types/prediction";
@@ -13,9 +14,9 @@ interface ImageModalProps {
 export function ImageModal({ molecule, onClose }: ImageModalProps) {
   const displayName = useResolvedName(molecule?.smiles ?? "", molecule?.name ?? "");
 
-  if (!molecule) return null;
+  if (!molecule || typeof document === "undefined") return null;
 
-  return (
+  return createPortal(
     <div
       onClick={onClose}
       style={{
@@ -55,12 +56,12 @@ export function ImageModal({ molecule, onClose }: ImageModalProps) {
           <div
             onClick={onClose}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = "#ececec";
-              e.currentTarget.style.color = "#1a1a1a";
+              e.currentTarget.style.background = codGray[200];
+              e.currentTarget.style.color = codGray[900];
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.background = "transparent";
-              e.currentTarget.style.color = "#6a6a6a";
+              e.currentTarget.style.color = codGray[500];
             }}
             style={{
               width: 32,
@@ -70,8 +71,8 @@ export function ImageModal({ molecule, onClose }: ImageModalProps) {
               alignItems: "center",
               justifyContent: "center",
               cursor: "pointer",
-              color: "#6a6a6a",
-              fontSize: 20,
+              color: codGray[500],
+              fontSize: 22,
             }}
           >
             ×
@@ -79,9 +80,14 @@ export function ImageModal({ molecule, onClose }: ImageModalProps) {
         </div>
         <div style={{ width: "100%", height: 560, background: colors.white, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={structureImageUrl(molecule.smiles)} alt="" style={{ maxWidth: "100%", maxHeight: "100%" }} />
+          <img
+            src={structureImageUrl(molecule.smiles)}
+            alt=""
+            style={{ width: "100%", height: "100%", objectFit: "contain", padding: 24, boxSizing: "border-box" }}
+          />
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

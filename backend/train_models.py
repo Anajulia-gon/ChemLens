@@ -40,6 +40,7 @@ from sklearn.preprocessing import RobustScaler
 
 from conformal import ConformalPredictorESD
 from domain import CONFORMAL_CONFIDENCE
+from novelty import canonical_smiles
 
 HERE = os.path.dirname(__file__)
 DATA_PATH = os.path.join(HERE, "data", "delaney-processed.csv")
@@ -121,6 +122,11 @@ def main() -> None:
     df = pd.read_csv(DATA_PATH)
     df = df.rename(columns={"measured log solubility in mols per litre": "logS", "smiles": "smiles"})
     df = df[["smiles", "logS"]].dropna()
+
+    known_smiles = sorted({s for s in (canonical_smiles(smi) for smi in df["smiles"]) if s})
+    with open(os.path.join(MODELS_DIR, "known_smiles.json"), "w") as f:
+        json.dump(known_smiles, f)
+    print(f"Moléculas conhecidas (para detecção de 'molécula inédita'): {len(known_smiles)}")
 
     raw = compute_raw_descriptors(df["smiles"].tolist())
     raw["logS"] = df["logS"].values

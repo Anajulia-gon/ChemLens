@@ -89,8 +89,8 @@ export function ArquivoTab({ fileStage, fileName, onFileSelected, onClearFile, o
           {isIdle && (
             <>
               <UploadCloudIcon size={34} color={colors.dropZoneText} />
-              <span style={{ fontWeight: 500, fontSize: 15, color: colors.dropZoneText }}>
-                Arraste um arquivo .csv ou .sdf
+              <span style={{ fontWeight: 500, fontSize: 14, color: colors.dropZoneText }}>
+                Drag a .csv or .sdf file here
               </span>
               <div
                 onClick={openFilePicker}
@@ -109,7 +109,7 @@ export function ArquivoTab({ fileStage, fileName, onFileSelected, onClearFile, o
                   transition: "opacity .15s",
                 }}
               >
-                <span style={{ fontWeight: 500, fontSize: 14, color: colors.white }}>Adicionar arquivo</span>
+                <span style={{ fontWeight: 500, fontSize: 14, color: colors.white }}>Add file</span>
               </div>
             </>
           )}
@@ -119,7 +119,7 @@ export function ArquivoTab({ fileStage, fileName, onFileSelected, onClearFile, o
               <span
                 style={{
                   fontWeight: 600,
-                  fontSize: 15,
+                  fontSize: 14,
                   color: colors.fileName,
                   maxWidth: 520,
                   whiteSpace: "nowrap",
@@ -136,7 +136,7 @@ export function ArquivoTab({ fileStage, fileName, onFileSelected, onClearFile, o
                 style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}
               >
                 <XIcon size={14} color={colors.fileRemoveText} strokeWidth={1.8} />
-                <span style={{ fontSize: 13, color: colors.fileRemoveText }}>Remover</span>
+                <span style={{ fontSize: 14, color: colors.fileRemoveText }}>Remove</span>
               </div>
             </div>
           )}
@@ -161,7 +161,7 @@ export function ArquivoTab({ fileStage, fileName, onFileSelected, onClearFile, o
           transition: "background .15s",
         }}
       >
-        <span style={{ fontWeight: 500, fontSize: 16, color: colors.secondarySendText }}>Enviar</span>
+        <span style={{ fontWeight: 500, fontSize: 18, color: colors.secondarySendText }}>Submit</span>
       </div>
     </div>
   );

@@ -52,7 +52,7 @@ export function FileLoadingModal({ isOpen, fileName, progress }: FileLoadingModa
         >
           <UploadCloudIcon size={34} color={colors.white} strokeWidth={1.6} />
         </div>
-        <span style={{ fontWeight: 600, fontSize: 24, color: colors.ink }}>Carregando arquivo</span>
+        <span style={{ fontWeight: 600, fontSize: 22, color: colors.ink }}>Loading file</span>
         <span style={{ fontWeight: 400, fontSize: 14, color: colors.emptySubtitle, textAlign: "center" }}>
           {fileName}
         </span>
@@ -67,7 +67,7 @@ export function FileLoadingModal({ isOpen, fileName, progress }: FileLoadingModa
             }}
           />
         </div>
-        <span style={{ fontWeight: 500, fontSize: 13, color: colors.tabIdleText }}>{progressStr}</span>
+        <span style={{ fontWeight: 500, fontSize: 14, color: colors.tabIdleText }}>{progressStr}</span>
       </div>
     </div>
   );

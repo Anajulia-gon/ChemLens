@@ -14,10 +14,10 @@ SOLUBILITY_LIMITS = {
     float("-inf"): "Low Solubility",
 }
 
-SOLUBILITY_LABELS_PT = {
-    "High Solubility": "Alta solubilidade",
-    "Slightly Soluble": "Pouco solúvel",
-    "Low Solubility": "Baixa solubilidade",
+SOLUBILITY_LABELS_EN = {
+    "High Solubility": "Highly soluble",
+    "Slightly Soluble": "Slightly soluble",
+    "Low Solubility": "Poorly soluble",
 }
 
 # Faixas de referência físico-química (Lipinski/Veber/Ghose) usadas para

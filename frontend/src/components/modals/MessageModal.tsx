@@ -56,11 +56,11 @@ export function MessageModal({ isOpen, icon, title, message, onClose }: MessageM
         >
           {icon}
         </div>
-        <span style={{ fontWeight: 600, fontSize: 28, color: colors.ink }}>{title}</span>
+        <span style={{ fontWeight: 600, fontSize: 27, color: colors.ink }}>{title}</span>
         <span
           style={{
             fontWeight: 400,
-            fontSize: 15,
+            fontSize: 14,
             color: colors.emptySubtitle,
             textAlign: "center",
             maxWidth: 360,
@@ -86,7 +86,7 @@ export function MessageModal({ isOpen, icon, title, message, onClose }: MessageM
             transition: "opacity .15s",
           }}
         >
-          <span style={{ fontWeight: 500, fontSize: 16, color: colors.white }}>Voltar</span>
+          <span style={{ fontWeight: 500, fontSize: 18, color: colors.white }}>Back</span>
         </div>
       </div>
     </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { colors } from "@/lib/theme";
+import { codGray, colors } from "@/lib/theme";
 import type { Study } from "@/hooks/useHistory";
 import { GraduationCapIcon, ClockIcon } from "./icons";
 
@@ -48,7 +48,7 @@ export function CollapsedSidebar({
       >
         <div
           onClick={onNovoEstudo}
-          title="Novo estudo"
+          title="New study"
           style={{
             width: 56,
             height: 56,
@@ -65,7 +65,7 @@ export function CollapsedSidebar({
         </div>
         <div
           onClick={onHistorico}
-          title="Histórico"
+          title="History"
           onMouseEnter={(e) => (e.currentTarget.style.background = colors.buttonSecondaryHover)}
           onMouseLeave={(e) => (e.currentTarget.style.background = colors.navIdleBg)}
           style={{
@@ -82,7 +82,7 @@ export function CollapsedSidebar({
         >
           <ClockIcon size={22} color={colors.navIdleStroke} strokeWidth={1.6} />
         </div>
-        <div style={{ width: 40, height: 1, background: "#c9c9c9", margin: "2px 0" }} />
+        <div style={{ width: 40, height: 1, background: codGray[300], margin: "2px 0" }} />
         {studies.map((study) => {
           const isActive = !isLoading && study.id === activeStudyId;
           return (
@@ -108,7 +108,7 @@ export function CollapsedSidebar({
               <span
                 style={{
                   position: "absolute",
-                  fontSize: 13,
+                  fontSize: 14,
                   fontWeight: 700,
                   color: isActive ? colors.white : colors.navIdleStroke,
                 }}
