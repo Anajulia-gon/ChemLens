@@ -45,14 +45,13 @@ export function SmilesTab({ molecules, onAddMolecules, onRemoveMolecule, onSubmi
           top: 376,
           width: 626,
           height: 58,
-          borderRadius: 10,
           overflow: "hidden",
           display: "flex",
           flexDirection: "row",
           alignItems: "stretch",
         }}
       >
-        <div style={{ flexGrow: 1, background: colors.inputField, display: "flex", alignItems: "center", padding: "0 20px" }}>
+        <div style={{ flexGrow: 1, background: colors.canvas, display: "flex", alignItems: "center", padding: "0 20px", margin: "0 8px 0 0", borderRadius: 10 }}>
           <input
             ref={inputRef}
             onKeyDown={handleKeyDown}
@@ -62,12 +61,12 @@ export function SmilesTab({ molecules, onAddMolecules, onRemoveMolecule, onSubmi
         </div>
         <div
           onClick={addFromInput}
-          onMouseEnter={(e) => (e.currentTarget.style.background = colors.addButtonHover)}
-          onMouseLeave={(e) => (e.currentTarget.style.background = colors.addButton)}
+          onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.8")}
+          onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
           style={{
-            width: 172,
+            width: 134,
             flexShrink: 0,
-            background: colors.addButton,
+            background: "#0a0a0a",
             display: "flex",
             flexDirection: "row",
             gap: 10,
@@ -75,6 +74,7 @@ export function SmilesTab({ molecules, onAddMolecules, onRemoveMolecule, onSubmi
             alignItems: "center",
             cursor: "pointer",
             transition: "background .15s",
+            borderRadius: 10,
           }}
         >
           <PlusIcon />

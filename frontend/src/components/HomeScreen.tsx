@@ -9,6 +9,7 @@ import { submitMoleculesForPrediction } from "@/lib/prediction";
 import { useHistory } from "@/hooks/useHistory";
 import type { Molecule } from "@/types/molecule";
 import type { InvalidMolecule } from "@/types/prediction";
+import logo from "@/assets/logo.png";
 import { AlertIcon, GraduationCapIcon, ClockIcon, Spinner } from "./icons";
 import { TabBar } from "./TabBar";
 import { StepsPanel } from "./StepsPanel";
@@ -30,20 +31,6 @@ export type Stage = "input" | "loading" | "opening" | "results";
 
 const CANVAS_WIDTH = 1920;
 const CANVAS_HEIGHT = 1080;
-
-// Etapas reais do pipeline (ver backend/app.py e backend/train_models.py):
-// validação -> descritores RDKit -> scaler + modelo primário (stacking/Lasso)
-// -> modelo de erro -> margem conformal (UQ). A barra avança até a
-// penúltima etapa enquanto espera o backend responder e só chega a 100%
-// quando a resposta realmente chega.
-const PIPELINE_STEPS = [
-  { p: 10, label: "Validating SMILES structure..." },
-  { p: 25, label: "Filtering compounds and handling exceptions..." },
-  { p: 45, label: "Generating molecular descriptors (RDKit)..." },
-  { p: 65, label: "Applying the scaler and the primary model (stacking + Lasso)..." },
-  { p: 82, label: "Estimating the model's error (Random Forest)..." },
-  { p: 92, label: "Computing the conformal margin (UQ, 90% confidence)..." },
-];
 
 const MAX_LISTED_INVALID = 5;
 
@@ -77,12 +64,11 @@ export function HomeScreen() {
   const [formResetKey, setFormResetKey] = useState(0);
 
   const [loadingProgress, setLoadingProgress] = useState(0);
-  const [loadingLabel, setLoadingLabel] = useState(PIPELINE_STEPS[0].label);
+  const [loadingLabel, setLoadingLabel] = useState("");
   const [activeStudyId, setActiveStudyId] = useState<number | null>(null);
   const [notice, setNotice] = useState<{ title: string; message: string } | null>(null);
 
   const seqRef = useRef(0);
-  const progressTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const history = useHistory();
 
   useEffect(() => {
@@ -91,12 +77,6 @@ export function HomeScreen() {
     const onResize = () => setScale(computeScale());
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (progressTimerRef.current) clearInterval(progressTimerRef.current);
-    };
   }, []);
 
   const addMolecules = (smilesList: string[]) => {
@@ -120,19 +100,19 @@ export function HomeScreen() {
     if (!molecules.length) return;
 
     setStage("loading");
-    setLoadingProgress(PIPELINE_STEPS[0].p);
-    setLoadingLabel(PIPELINE_STEPS[0].label);
-
-    let stepIndex = 0;
-    progressTimerRef.current = setInterval(() => {
-      stepIndex = Math.min(stepIndex + 1, PIPELINE_STEPS.length - 1);
-      setLoadingProgress(PIPELINE_STEPS[stepIndex].p);
-      setLoadingLabel(PIPELINE_STEPS[stepIndex].label);
-    }, 900);
+    setLoadingProgress(0);
+    setLoadingLabel("Starting...");
 
     try {
-      const payload = await submitMoleculesForPrediction({ molecules });
-      if (progressTimerRef.current) clearInterval(progressTimerRef.current);
+      // Progresso vem direto do backend (NDJSON streamado por
+      // requestPrediction) — cada porcentagem só chega quando aquela etapa
+      // real do pipeline (validação, descritores, modelo primário, modelo de
+      // erro, margem conformal, classificação por molécula) já terminou de
+      // rodar, nunca por um timer client-side.
+      const payload = await submitMoleculesForPrediction({ molecules }, (event) => {
+        setLoadingProgress(event.percent);
+        setLoadingLabel(event.stage);
+      });
       setLoadingProgress(100);
       setLoadingLabel("Done!");
 
@@ -144,7 +124,6 @@ export function HomeScreen() {
         if (payload.invalid.length) setNotice(describeInvalidMolecules(payload.invalid));
       }, 550);
     } catch (err) {
-      if (progressTimerRef.current) clearInterval(progressTimerRef.current);
       setStage("input");
       setNotice({
         title: "Prediction failed",
@@ -191,7 +170,6 @@ export function HomeScreen() {
   };
 
   const resetForm = () => {
-    if (progressTimerRef.current) clearInterval(progressTimerRef.current);
     setStage("input");
     setActiveTab("smiles");
     setMolecules([]);
@@ -268,7 +246,7 @@ export function HomeScreen() {
               onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
               style={{
                 position: "absolute",
-                left: 18,
+                left: 12,
                 top: 47,
                 width: 460,
                 height: 110,
@@ -293,7 +271,7 @@ export function HomeScreen() {
               onMouseLeave={(e) => (e.currentTarget.style.background = colors.buttonSecondary)}
               style={{
                 position: "absolute",
-                left: 494,
+                left: 488,
                 top: 47,
                 width: 460,
                 height: 110,
@@ -337,16 +315,59 @@ export function HomeScreen() {
             )}
             {activeTab === "desenho" && <DesenhoTab onComingSoon={() => openComingSoon("Structure drawing")} />}
 
-            <div style={{ position: "absolute", left: 1225, top: 100, width: 440 }}>
+            <div
+              style={{
+                position: "absolute",
+                left: 1225,
+                top: "50%",
+                width: 440,
+                transform: "translateY(-50%)",
+                display: "flex",
+                flexDirection: "column",
+                gap: 40,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={logo.src}
+                  alt="ChemLens logo"
+                  style={{ width: 52, height: 52, objectFit: "contain", flexShrink: 0 }}
+                />
+                <div style={{ display: "flex", flexDirection: "column", width: "max-content"}}>
+                  <span style={{ fontWeight: 800, fontSize: 34, letterSpacing: -0.5, whiteSpace: "nowrap",lineHeight: 0.95 }}>
+                    <span style={{ color: "#132a4d" }}>Chem</span>
+                    <span
+                      style={{
+                        backgroundImage: "linear-gradient(90deg, #2563eb, #14b8a6)",
+                        WebkitBackgroundClip: "text",
+                        backgroundClip: "text",
+                        color: "transparent",
+                      }}
+                    >
+                      Lens
+                    </span>
+                  </span>
+                  <div
+                    style={{
+                      height: 2,
+                      width: "100%",
+                      borderRadius: 2,
+                      backgroundImage: "linear-gradient(90deg, #2563eb, #14b8a6)",
+                    }}
+                  />
+                </div>
+              </div>
+
               <span style={{ fontWeight: 400, fontSize: 18, color: colors.stepDesc, lineHeight: 1.55 }}>
                 This tool predicts key ADMET properties while assessing the reliability of each result for better
                 decision-making. Currently focused on logS, our Machine Learning platform estimates solubility and
                 clearly shows how much you can trust the numbers, automatically flagging compounds that fall outside
                 the applicability domain. Here is how to get started:
               </span>
-            </div>
 
-            <StepsPanel />
+              <StepsPanel />
+            </div>
           </div>
         )}
 

@@ -9,9 +9,9 @@ interface TabBarProps {
 }
 
 const TABS: { key: ActiveTab; label: string }[] = [
-  { key: "smiles", label: "Smiles" },
   { key: "arquivo", label: "File" },
-  { key: "desenho", label: "Draw" },
+  { key: "smiles", label: "Smiles" },
+  // { key: "desenho", label: "Draw" },
 ];
 
 export function TabBar({ activeTab, onSelect }: TabBarProps) {

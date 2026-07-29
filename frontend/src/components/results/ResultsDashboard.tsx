@@ -7,7 +7,7 @@ import { queueNameResolution } from "@/lib/nameResolver";
 import { deleteMolecules } from "@/lib/api";
 import { InfoIcon } from "../InfoIcon";
 import type { MoleculeResult, PredictionResponse, RadarRange, ReliabilityStatus } from "@/types/prediction";
-import { CheckIcon, FilterIcon, SearchIcon } from "../icons";
+import { ArrowRightIcon, CheckIcon, FilterIcon, SearchIcon } from "../icons";
 import { DetailPanel } from "./DetailPanel";
 import { ImageModal } from "./ImageModal";
 import { RadarModal } from "./RadarModal";
@@ -149,7 +149,7 @@ export function ResultsDashboard({ studyId, results, radarAxes, radarRanges, onM
           Molecular Screening Results
         </span>
         <span style={{ display: "block", marginTop: 6, fontSize: 14, color: colors.emptySubtitle, lineHeight: 1.4 }}>
-          Review predicted properties and LogS reliability. Select a molecule to explore its full details.
+          Review predicted properties and LogS reliability.
         </span>
       </div>
 
@@ -254,7 +254,22 @@ export function ResultsDashboard({ studyId, results, radarAxes, radarRanges, onM
         style={{
           position: "absolute",
           left: 150,
-          top: 230,
+          top: 225,
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+        }}
+      >
+        <span style={{ fontWeight: 700, fontSize: 14, color: colors.ink }}>
+          Select a molecule below to explore its full details
+        </span>
+      </div>
+
+      <div
+        style={{
+          position: "absolute",
+          left: 150,
+          top: 256,
           width: 828,
           height: 52,
           background: colors.tableHeaderBg,
@@ -280,9 +295,9 @@ export function ResultsDashboard({ studyId, results, radarAxes, radarRanges, onM
         style={{
           position: "absolute",
           left: 150,
-          top: 282,
+          top: 308,
           width: 828,
-          height: 738,
+          height: 712,
         }}
       >
         <div
@@ -297,9 +312,9 @@ export function ResultsDashboard({ studyId, results, radarAxes, radarRanges, onM
             borderRadius: "0 0 10px 10px",
           }}
         >
-          {filtered.map((m, i) => {
+          {filtered.map((m) => {
             const isActive = m.id === detailId;
-            const baseBg = isActive ? colors.tableRowActive : i % 2 === 0 ? colors.white : colors.tableRowAlt;
+            const baseBg = isActive ? colors.tableRowActive : colors.white;
             return (
             <div
               key={m.id}
@@ -333,17 +348,19 @@ export function ResultsDashboard({ studyId, results, radarAxes, radarRanges, onM
               <div style={{ width: 230, fontFamily: "monospace", fontSize: 12, color: codGray[500], whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", paddingRight: 12 }}>
                 {m.smiles}
               </div>
-              <div style={{ width: 130, display: "flex", alignItems: "center", gap: 6, color: codGray[800] }}>
-                {m.descriptors.MolWt.toFixed(2)}
+              <div style={{ width: 130, display: "flex", alignItems: "center", color: codGray[800] }}>
+                <span style={{ width: 56 }}>{m.descriptors.MolWt.toFixed(2)}</span>
                 <InfoIcon text={INFO_TEXT.MW} />
               </div>
-              <div style={{ width: 110, display: "flex", alignItems: "center", gap: 6, color: codGray[800] }}>
-                {m.descriptors.MolLogP.toFixed(2)}
+              <div style={{ width: 110, display: "flex", alignItems: "center", color: codGray[800] }}>
+                <span style={{ width: 46 }}>{m.descriptors.MolLogP.toFixed(2)}</span>
                 <InfoIcon text={INFO_TEXT.LogP} />
               </div>
-              <div style={{ flex: 1, display: "flex", alignItems: "baseline", gap: 6, color: codGray[800], paddingRight: 12 }}>
-                <span>{m.logS.toFixed(2)}</span>
-                <span style={{ fontSize: 12, color: codGray[500] }}>± {m.margin.toFixed(2)}</span>
+              <div style={{ flex: 1, display: "flex", alignItems: "baseline", color: codGray[800], paddingRight: 12 }}>
+                <span style={{ width: 96 }}>
+                  {m.logS.toFixed(2)}{" "}
+                  <span style={{ fontSize: 12, color: codGray[500] }}>± {m.margin.toFixed(2)}</span>
+                </span>
                 <span style={{ display: "inline-flex", alignItems: "center" }}>
                   <InfoIcon text={INFO_TEXT.LogS} />
                 </span>

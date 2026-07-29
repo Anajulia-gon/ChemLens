@@ -3,6 +3,7 @@
 import { codGray, colors } from "@/lib/theme";
 import { structureImageUrl } from "@/lib/molecules";
 import { useResolvedName } from "@/hooks/useResolvedName";
+import { classTagColor } from "@/lib/solubility";
 import type { MoleculeResult, RadarRange } from "@/types/prediction";
 import { InfoIcon } from "../InfoIcon";
 import { RadarChart, RadarLegend } from "./RadarChart";
@@ -67,72 +68,61 @@ export function DetailPanel({ molecule, radarAxes, radarRanges, onOpenImage, onO
         animation: "detailIn .3s cubic-bezier(.22,.61,.36,1)",
       }}
     >
+      <div style={{ marginBottom: 20, animation: "infoUp .4s ease 0s both" }}>
+        <div
+          style={{
+            fontWeight: 700,
+            fontSize: 22,
+            color: colors.cardTitle,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+        >
+          {displayName}
+        </div>
+        <div
+          style={{
+            marginTop: 4,
+            fontFamily: "monospace",
+            fontSize: 13,
+            color: codGray[500],
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+        >
+          {molecule.smiles}
+        </div>
+      </div>
+
       <div style={{ display: "flex", gap: 16, animation: "infoUp .4s ease .05s both" }}>
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 16 }}>
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            <div
-              style={{
-                position: "relative",
-                height: 120,
-                background: colors.white,
-                borderRadius: "10px 10px 0 0",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                overflow: "hidden",
-              }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={structureImageUrl(molecule.smiles)}
-                alt=""
-                style={{ width: "100%", height: "100%", objectFit: "contain", padding: 14, boxSizing: "border-box" }}
-              />
-              <ExpandButton onClick={onOpenImage} />
-            </div>
-            <div
-              style={{
-                height: 52,
-                boxSizing: "border-box",
-                background: colors.detailFooterBg,
-                borderRadius: "0 0 10px 10px",
-                padding: "8px 14px",
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "center",
-              }}
-            >
-              <div
-                style={{
-                  fontWeight: 600,
-                  fontSize: 14,
-                  color: colors.cardTitle,
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}
-              >
-                {displayName}
-              </div>
-              <div
-                style={{
-                  fontFamily: "monospace",
-                  fontSize: 11,
-                  color: codGray[500],
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}
-              >
-                {molecule.smiles}
-              </div>
-            </div>
+          <div
+            style={{
+              position: "relative",
+              height: 168,
+              background: colors.white,
+              borderRadius: 10,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              overflow: "hidden",
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={structureImageUrl(molecule.smiles)}
+              alt=""
+              style={{ width: "100%", height: "100%", objectFit: "contain", padding: 14, boxSizing: "border-box" }}
+            />
+            <ExpandButton onClick={onOpenImage} />
           </div>
 
           <div
             style={{
               position: "relative",
-              height: 480,
+              height: 432,
               borderRadius: 10,
               padding: "10px 6px 6px",
               display: "flex",
@@ -204,24 +194,77 @@ export function DetailPanel({ molecule, radarAxes, radarRanges, onOpenImage, onO
         </div>
       </div>
 
-      <div style={{ marginTop: 28, animation: "infoUp .4s ease .12s both" }}>
-        <span style={{ fontWeight: 600, fontSize: 18, color: colors.tabIdleText }}>LogS</span>
-      </div>
-      <div style={{ marginTop: 4, display: "flex", alignItems: "baseline", gap: 14 }}>
-        <span style={{ fontWeight: 800, fontSize: 83, color: codGray[900], lineHeight: 1 }}>{molecule.logS.toFixed(2)}</span>
-        <span style={{ fontWeight: 400, fontSize: 34, color: codGray[800] }}>± {molecule.margin.toFixed(2)}</span>
+      <div
+        style={{
+          marginTop: 24,
+          background: colors.white,
+          borderRadius: 10,
+          overflow: "hidden",
+          animation: "infoUp .4s ease .12s both",
+        }}
+      >
+        <div
+          style={{
+            padding: "12px 16px",
+            background: colors.tableHeaderBg,
+            fontWeight: 600,
+            fontSize: 14,
+            color: codGray[800],
+          }}
+        >
+          LogS
+        </div>
+        <div style={{ padding: "20px 24px 24px" }}>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 14 }}>
+              <span style={{ fontWeight: 800, fontSize: 83, color: codGray[900], lineHeight: 1 }}>
+                {molecule.logS.toFixed(2)}
+              </span>
+              <span style={{ fontWeight: 400, fontSize: 34, color: codGray[800] }}>± {molecule.margin.toFixed(2)}</span>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 5 }}>
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: colors.emptySubtitle,
+                  textTransform: "uppercase",
+                  letterSpacing: 0.4,
+                }}
+              >
+                Class Range
+              </span>
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: colors.white,
+                  background: classTagColor(molecule.classTag),
+                  padding: "4px 11px",
+                  borderRadius: 999,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {molecule.classTag}
+              </span>
+            </div>
+          </div>
+
+          <div style={{ marginTop: 30 }}>
+            <UncertaintyChart logS={molecule.logS} lowerBound={molecule.lowerBound} upperBound={molecule.upperBound} />
+          </div>
+        </div>
       </div>
 
-      <div style={{ marginTop: 30 }}>
-        <UncertaintyChart
-          logS={molecule.logS}
-          lowerBound={molecule.lowerBound}
-          upperBound={molecule.upperBound}
-          classTag={molecule.classTag}
-        />
-      </div>
-
-      <div style={{ marginTop: 26, animation: "infoUp .4s ease .16s both" }}>
+      <div
+        style={{
+          marginTop: 24,
+          background: colors.white,
+          borderRadius: 10,
+          padding: "20px 24px 24px",
+          animation: "infoUp .4s ease .16s both",
+        }}
+      >
         <span
           style={{
             display: "inline-block",

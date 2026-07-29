@@ -1,11 +1,10 @@
 import { codGray, colors } from "@/lib/theme";
-import { SOLUBILITY_ZONE_BOUNDARIES, SOLUBILITY_ZONE_LABELS, classTagColor } from "@/lib/solubility";
+import { SOLUBILITY_ZONE_BOUNDARIES, SOLUBILITY_ZONE_LABELS } from "@/lib/solubility";
 
 interface UncertaintyChartProps {
   logS: number;
   lowerBound: number;
   upperBound: number;
-  classTag: string;
 }
 
 // Régua fixa do eixo (-8 a +5) — não se expande com os dados; predições ou
@@ -52,7 +51,7 @@ function niceStep(span: number) {
   return Math.ceil(span / 6 / 5) * 5;
 }
 
-export function UncertaintyChart({ logS, lowerBound, upperBound, classTag }: UncertaintyChartProps) {
+export function UncertaintyChart({ logS, lowerBound, upperBound }: UncertaintyChartProps) {
   const span = AXIS_MAX - AXIS_MIN;
   const pct = (v: number) => clamp(((v - AXIS_MIN) / span) * 100);
 
@@ -82,29 +81,9 @@ export function UncertaintyChart({ logS, lowerBound, upperBound, classTag }: Unc
 
   return (
     <div>
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          <span style={{ fontWeight: 600, fontSize: 14, color: colors.tabIdleText }}>Reliability Assessment</span>
-          <span style={{ fontSize: 12, color: colors.emptySubtitle }}>Prediction Error Margin</span>
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 5 }}>
-          <span style={{ fontSize: 11, fontWeight: 600, color: colors.emptySubtitle, textTransform: "uppercase", letterSpacing: 0.4 }}>
-            Class Range
-          </span>
-          <span
-            style={{
-              fontSize: 12,
-              fontWeight: 600,
-              color: colors.white,
-              background: classTagColor(classTag),
-              padding: "4px 11px",
-              borderRadius: 999,
-              whiteSpace: "nowrap",
-            }}
-          >
-            {classTag}
-          </span>
-        </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        <span style={{ fontWeight: 600, fontSize: 14, color: colors.tabIdleText }}>Reliability Assessment</span>
+        <span style={{ fontSize: 12, color: colors.emptySubtitle }}>Prediction Error Margin</span>
       </div>
 
       {/* previsão média (tooltip) + barra gradiente + intervalo + limites + legenda de zonas */}

@@ -12,9 +12,9 @@ interface RadarChartProps {
 }
 
 const LEGEND_ITEMS: { key: RadarSeriesKey; color: string; label: string }[] = [
-  { key: "upper", color: "#6f86e8", label: "Upper limit" },
-  { key: "lower", color: "#57b97e", label: "Lower limit" },
-  { key: "compound", color: "#f0a92e", label: "Compound properties" },
+  { key: "upper", color: "#f0a92e", label: "Upper Limit" },
+  { key: "lower", color: "#e8637a", label: "Lower Limit" },
+  { key: "compound", color: "#5b8def", label: "Compound Properties" },
 ];
 
 interface RadarLegendProps {
@@ -115,30 +115,30 @@ export function RadarChart({ descriptors, axes, ranges, highlight }: RadarChartP
       })}
       <polygon
         points={pointsStr(R)}
-        fill="#8ea2f0"
-        fillOpacity={0.4 * opacityFor("upper")}
-        stroke="#6f86e8"
+        fill="#f6cb80"
+        fillOpacity={0.5 * opacityFor("upper")}
+        stroke="#f0a92e"
         strokeOpacity={opacityFor("upper")}
         strokeWidth={widthFor("upper", 1.5)}
       />
       <polygon
         points={pointsStr(R * FLOOR)}
-        fill="#7fce9e"
+        fill="#f3aab8"
         fillOpacity={0.7 * opacityFor("lower")}
-        stroke="#57b97e"
+        stroke="#e8637a"
         strokeOpacity={opacityFor("lower")}
         strokeWidth={widthFor("lower", 1.5)}
       />
       <polygon
         points={pointsStr(valueRadius)}
         fill="none"
-        stroke="#f0a92e"
+        stroke="#5b8def"
         strokeOpacity={opacityFor("compound")}
         strokeWidth={widthFor("compound", 2)}
       />
       {axes.map((key, i) => {
         const [x, y] = point(valueRadius(key), i);
-        return <circle key={`d${i}`} cx={x} cy={y} r={2.4} fill="#f0a92e" fillOpacity={opacityFor("compound")} />;
+        return <circle key={`d${i}`} cx={x} cy={y} r={2.4} fill="#5b8def" fillOpacity={opacityFor("compound")} />;
       })}
       {axes.map((key, i) => {
         const [x, y] = point(R + 17, i);

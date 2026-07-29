@@ -9,7 +9,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "SMILES Generator",
+  title: "ChemLens",
   description: "Aqueous solubility prediction with uncertainty quantification",
 };
 

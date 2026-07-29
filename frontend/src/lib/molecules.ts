@@ -17,22 +17,17 @@ export function tokenizeSmilesInput(raw: string): string[] {
 }
 
 /**
- * URL da imagem 2D da estrutura, via CDK Depict (mesmo serviço usado no Claude Design
- * para renderizar as moléculas nos cards). "cow" = Color On White (átomos
- * coloridos por elemento — O em vermelho, N em azul etc.), diferente de "bow"
- * (Black On White, monocromático). Sem os parâmetros w/h, o CDK recorta o
- * SVG bem rente à molécula (sem margem morta) — pedir um w/h fixo faz o CDK
- * centralizar a mesma molécula (tamanho fixo, controlado só por `zoom`) num
- * canvas maior, sobrando espaço vazio ao redor dela mesmo em containers
- * grandes. Cada tela então escala esse SVG bem ajustado via CSS
- * (width/height:100% + objectFit:"contain"), preenchendo o espaço disponível
- * sem distorcer nem deixar a estrutura minúscula.
+ * URL da imagem 2D da estrutura, via CDK Depict. Sem `w`/`h` fixos: o canvas
+ * se ajusta (auto-crop) exatamente ao tamanho da molécula, então o
+ * <img style="objectFit:contain"> do card consegue escalar a molécula para
+ * preencher a caixa inteira em vez de sobrar margem em branco ao redor de
+ * moléculas pequenas (ex.: água).
  */
 export function structureImageUrl(smiles: string): string {
   const params = new URLSearchParams({
     smi: normalizeSmiles(smiles),
     abbr: "off",
-    zoom: "1.7",
+    zoom: "0.5",
   });
-  return `https://www.simolecule.com/cdkdepict/depict/cow/svg?${params.toString()}`;
+  return `https://www.simolecule.com/cdkdepict/depict/bow/svg?${params.toString()}`;
 }

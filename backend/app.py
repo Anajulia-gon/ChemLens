@@ -7,6 +7,7 @@ alerts. Trained artifacts come from `train_models.py` (see there for why).
 """
 from __future__ import annotations
 
+import json
 import os
 import re
 from typing import Optional
@@ -16,6 +17,7 @@ import numpy as np
 import pandas as pd
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from rdkit import Chem
 
@@ -38,7 +40,7 @@ MODEL_ERROR = joblib.load(os.path.join(MODELS_DIR, "model_error.joblib"))
 CONFORMAL = joblib.load(os.path.join(MODELS_DIR, "conformal_calibrator.joblib"))
 KNOWN_SMILES = load_known_smiles()
 
-app = FastAPI(title="SolvUQ - Solubility Prediction")
+app = FastAPI(title="ChemLens - Solubility Prediction")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000"],
@@ -137,10 +139,19 @@ def health():
     return {"status": "ok", "n_descriptors": len(DESCRIPTOR_NAMES)}
 
 
-@app.post("/predict")
-def predict(payload: PredictRequest):
+def _progress_line(stage: str, percent: int) -> str:
+    return json.dumps({"type": "progress", "stage": stage, "percent": percent}) + "\n"
+
+
+def run_predict_pipeline(payload: PredictRequest):
+    """Gerador que executa o pipeline real (mesmas etapas de antes, agora com
+    `yield` de progresso genuíno após cada etapa REALMENTE terminar — nada de
+    barra avançando por tempo/timer, cada porcentagem só sai quando aquele
+    trecho de código abaixo já rodou de verdade)."""
     results = []
     invalid = []
+
+    yield _progress_line("Validating structures and computing molecular descriptors (RDKit)...", 5)
 
     # Each molecule goes through two independent filters: (1) the SMILES must
     # be parseable by RDKit, (2) the computed descriptors must all be finite
@@ -156,8 +167,10 @@ def predict(payload: PredictRequest):
             invalid.append({"id": item.id, "smiles": item.smiles, "name": item.name, "reason": "Invalid SMILES"})
             continue
 
-        descriptor_vector = calculate_descriptors(smi, CALCULATOR, len(DESCRIPTOR_NAMES))
-        if not np.all(np.isfinite(descriptor_vector)):
+        descriptor_vector = np.asarray(calculate_descriptors(smi, CALCULATOR, len(DESCRIPTOR_NAMES)), dtype=float)
+        if not np.any(np.isfinite(descriptor_vector)):
+            # Cálculo falhou por completo (ex.: RDKit não consegue processar a
+            # estrutura de jeito nenhum) — isso sim é inutilizável.
             invalid.append(
                 {
                     "id": item.id,
@@ -168,7 +181,19 @@ def predict(payload: PredictRequest):
             )
             continue
 
+        # Alguns poucos descritores (tipicamente BCUT2D_*, que dependem de
+        # cargas de Gasteiger) podem vir NaN para estruturas incomuns — metais
+        # como Hg/Co, sais multi-fragmento (SMILES com '.') — sem que isso
+        # invalide a molécula inteira. O algoritmo de referência
+        # (toolsinterface.py::calculate_descritors) nunca descarta a molécula
+        # por causa disso, então também não descartamos: só zeramos esses
+        # valores pontuais para o scaler/modelo (que não toleram NaN) não
+        # quebrarem o restante do lote.
+        descriptor_vector = np.nan_to_num(descriptor_vector, nan=0.0, posinf=0.0, neginf=0.0)
+
         valid_items.append((item, smi, mol, descriptor_vector))
+
+    yield _progress_line("Validating structures and computing molecular descriptors (RDKit)...", 20)
 
     if valid_items:
         raw_vectors = pd.DataFrame(
@@ -177,10 +202,18 @@ def predict(payload: PredictRequest):
         )
         scaled_vectors = SCALER.transform(raw_vectors)
         logs_pred = MODEL_PRIMARY.predict(scaled_vectors)
-        uncertainty_pred = MODEL_ERROR.predict(raw_vectors)
-        lower_bounds, upper_bounds = CONFORMAL.predict_interval(logs_pred, uncertainty_pred)
+        yield _progress_line("Applying the scaler and the primary model (stacking + Lasso)...", 40)
 
-        for (item, smi, mol, _), logs, lower, upper in zip(valid_items, logs_pred, lower_bounds, upper_bounds):
+        uncertainty_pred = MODEL_ERROR.predict(raw_vectors)
+        yield _progress_line("Estimating the model's error (Random Forest)...", 55)
+
+        lower_bounds, upper_bounds = CONFORMAL.predict_interval(logs_pred, uncertainty_pred)
+        yield _progress_line("Computing the conformal margin (UQ, 90% confidence)...", 68)
+
+        n = len(valid_items)
+        for i, ((item, smi, mol, _), logs, lower, upper) in enumerate(
+            zip(valid_items, logs_pred, lower_bounds, upper_bounds)
+        ):
             logs = float(logs)
             lower = float(lower)
             upper = float(upper)
@@ -212,9 +245,19 @@ def predict(payload: PredictRequest):
                     "alerts": build_alerts(chem, reliability, is_novel),
                 }
             )
+            # Progresso real por molécula classificada (não por tempo decorrido).
+            percent = 68 + round(27 * (i + 1) / n)
+            yield _progress_line(f"Classifying molecule {i + 1} of {n} (alerts, novelty, reliability)...", percent)
 
     radar_ranges = {k: {"min": v[0], "max": v[1]} for k, v in RADAR_REFERENCE_RANGES.items()}
-    return storage.save_study(results, invalid, RADAR_AXES, radar_ranges, len(results))
+    yield _progress_line("Saving study...", 97)
+    study = storage.save_study(results, invalid, RADAR_AXES, radar_ranges, len(results))
+    yield json.dumps({"type": "done", "result": study}) + "\n"
+
+
+@app.post("/predict")
+def predict(payload: PredictRequest):
+    return StreamingResponse(run_predict_pipeline(payload), media_type="application/x-ndjson")
 
 
 @app.get("/studies")

@@ -27,9 +27,6 @@ export function StepsPanel() {
   return (
     <div
       style={{
-        position: "absolute",
-        left: 1225,
-        top: 340,
         width: 440,
         display: "flex",
         flexDirection: "column",
