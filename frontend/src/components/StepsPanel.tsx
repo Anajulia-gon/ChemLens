@@ -3,23 +3,23 @@ import { colors } from "@/lib/theme";
 const STEPS = [
   {
     num: "1",
-    title: "Envie suas moléculas",
-    desc: "Cole o SMILES, envie um arquivo .csv/.sdf ou desenhe a estrutura.",
+    title: "Submit your molecules",
+    desc: "Paste a SMILES, upload a .csv/.sdf file, or draw the structure.",
   },
   {
     num: "2",
-    title: "Aguarde o processamento",
-    desc: "Geração de descritores, predição e cálculo de incerteza em segundos.",
+    title: "Wait for processing",
+    desc: "Descriptor generation, prediction, and uncertainty calculation in seconds.",
   },
   {
     num: "3",
-    title: "Veja a predição e a confiabilidade",
-    desc: "Valor de solubilidade (logS) com margem de incerteza e alertas de risco, se houver.",
+    title: "See the prediction and reliability",
+    desc: "Solubility value (logS) with uncertainty margin and risk alerts, if any.",
   },
   {
     num: "4",
-    title: "Explore os detalhes da molécula",
-    desc: "Estrutura, propriedades-chave e os descritores que mais pesaram na predição.",
+    title: "Explore the molecule's details",
+    desc: "Structure, key properties, and the descriptors that weighed most in the prediction.",
   },
 ];
 
@@ -27,13 +27,10 @@ export function StepsPanel() {
   return (
     <div
       style={{
-        position: "absolute",
-        left: 1225,
-        top: 284,
         width: 440,
         display: "flex",
         flexDirection: "column",
-        gap: 56,
+        gap: 26,
       }}
     >
       {STEPS.map((step) => (
@@ -53,9 +50,9 @@ export function StepsPanel() {
             >
               <span style={{ fontSize: 12, fontWeight: 600, color: colors.white }}>{step.num}</span>
             </div>
-            <span style={{ fontWeight: 600, fontSize: 24, color: colors.stepTitle }}>{step.title}</span>
+            <span style={{ fontWeight: 600, fontSize: 22, color: colors.stepTitle }}>{step.title}</span>
           </div>
-          <span style={{ fontWeight: 400, fontSize: 16, color: colors.stepDesc, lineHeight: 1.4 }}>
+          <span style={{ fontWeight: 400, fontSize: 18, color: colors.stepDesc, lineHeight: 1.4 }}>
             {step.desc}
           </span>
         </div>

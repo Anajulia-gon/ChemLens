@@ -9,8 +9,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Gerador de SMILES",
-  description: "Predição de solubilidade aquosa com quantificação de incerteza",
+  title: "ChemLens",
+  description: "Aqueous solubility prediction with uncertainty quantification",
 };
 
 export default function RootLayout({
@@ -19,7 +19,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR" className={inter.variable}>
+    <html lang="en" className={inter.variable}>
       <body>{children}</body>
     </html>
   );

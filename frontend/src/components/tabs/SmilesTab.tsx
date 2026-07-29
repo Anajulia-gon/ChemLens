@@ -45,29 +45,28 @@ export function SmilesTab({ molecules, onAddMolecules, onRemoveMolecule, onSubmi
           top: 376,
           width: 626,
           height: 58,
-          borderRadius: 10,
           overflow: "hidden",
           display: "flex",
           flexDirection: "row",
           alignItems: "stretch",
         }}
       >
-        <div style={{ flexGrow: 1, background: colors.inputField, display: "flex", alignItems: "center", padding: "0 20px" }}>
+        <div style={{ flexGrow: 1, background: colors.canvas, display: "flex", alignItems: "center", padding: "0 20px", margin: "0 8px 0 0", borderRadius: 10 }}>
           <input
             ref={inputRef}
             onKeyDown={handleKeyDown}
-            placeholder="Escreva um ou mais smiles aqui..."
-            style={{ flexGrow: 1, border: "none", background: "transparent", fontSize: 16, color: colors.cardTitle, height: "100%" }}
+            placeholder="Type one or more SMILES here..."
+            style={{ flexGrow: 1, border: "none", background: "transparent", fontSize: 18, color: colors.cardTitle, height: "100%" }}
           />
         </div>
         <div
           onClick={addFromInput}
-          onMouseEnter={(e) => (e.currentTarget.style.background = colors.addButtonHover)}
-          onMouseLeave={(e) => (e.currentTarget.style.background = colors.addButton)}
+          onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.8")}
+          onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
           style={{
-            width: 172,
+            width: 134,
             flexShrink: 0,
-            background: colors.addButton,
+            background: "#0a0a0a",
             display: "flex",
             flexDirection: "row",
             gap: 10,
@@ -75,10 +74,11 @@ export function SmilesTab({ molecules, onAddMolecules, onRemoveMolecule, onSubmi
             alignItems: "center",
             cursor: "pointer",
             transition: "background .15s",
+            borderRadius: 10,
           }}
         >
           <PlusIcon />
-          <span style={{ fontWeight: 500, fontSize: 16, color: colors.white }}>Adicionar</span>
+          <span style={{ fontWeight: 500, fontSize: 18, color: colors.white }}>Add</span>
         </div>
       </div>
 
@@ -96,11 +96,11 @@ export function SmilesTab({ molecules, onAddMolecules, onRemoveMolecule, onSubmi
           }}
         >
           <MoleculeGlyph size={42} color={colors.emptyIcon} />
-          <span style={{ fontWeight: 500, fontSize: 19, color: colors.emptyTitle, whiteSpace: "nowrap" }}>
-            Suas moléculas vão aparecer aqui
+          <span style={{ fontWeight: 500, fontSize: 18, color: colors.emptyTitle, whiteSpace: "nowrap" }}>
+            Your molecules will show up here
           </span>
-          <span style={{ fontWeight: 400, fontSize: 13, color: colors.emptySubtitle, textAlign: "center", lineHeight: 1.45 }}>
-            Cole um SMILES acima, desenhe uma estrutura ou carregue um arquivo
+          <span style={{ fontWeight: 400, fontSize: 14, color: colors.emptySubtitle, textAlign: "center", lineHeight: 1.45 }}>
+            Paste a SMILES above, draw a structure, or upload a file
           </span>
         </div>
       )}
@@ -146,7 +146,7 @@ export function SmilesTab({ molecules, onAddMolecules, onRemoveMolecule, onSubmi
               transition: "opacity .15s",
             }}
           >
-            <span style={{ fontWeight: 600, fontSize: 16, color: colors.white }}>Enviar para predição</span>
+            <span style={{ fontWeight: 600, fontSize: 18, color: colors.white }}>Submit for prediction</span>
             <ArrowRightIcon />
           </div>
         </>

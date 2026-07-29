@@ -1,17 +1,14 @@
+import { requestPrediction, type PredictProgressEvent } from "@/lib/api";
 import type { Molecule } from "@/types/molecule";
+import type { PredictionResponse } from "@/types/prediction";
 
 export interface PredictionRequest {
-  molecules: Pick<Molecule, "smiles" | "name">[];
+  molecules: Molecule[];
 }
 
-// Ainda não há contrato definido com o pipeline de ML (ver pipeline.py na raiz do
-// projeto). Quando a API estiver pronta, troque o corpo desta função pela chamada
-// real — os componentes já importam e podem chamar `submitMoleculesForPrediction`,
-// só não fazem isso ainda.
 export async function submitMoleculesForPrediction(
-  request: PredictionRequest
-): Promise<never> {
-  throw new Error(
-    `Envio para predição ainda não implementado (${request.molecules.length} molécula(s) prontas para envio).`
-  );
+  request: PredictionRequest,
+  onProgress?: (event: PredictProgressEvent) => void
+): Promise<PredictionResponse> {
+  return requestPrediction(request.molecules, onProgress);
 }

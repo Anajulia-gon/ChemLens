@@ -3,6 +3,7 @@ import warnings
 
 # Bibliotecas de Dados
 import pandas as pd
+import numpy as np
 import joblib
 from joblib import Parallel, delayed
 from sklearn.ensemble import RandomForestRegressor
@@ -10,8 +11,9 @@ from sklearn.ensemble import RandomForestRegressor
 # Bibliotecas RDKit (Atualizadas)
 from rdkit import Chem
 from rdkit.Chem import Descriptors
-from rdkit.Chem import Lipinski          # <-- Adicionado (para NumHAcceptors)
-from rdkit.Chem import rdMolDescriptors  # <-- Adicionado (para CalcNumRotatableBonds)
+from rdkit.Chem import Lipinski          
+from rdkit.Chem import rdMolDescriptors  
+from rdkit.ML.Descriptors import MoleculeDescriptors
 
 
 # =====================================================================
@@ -139,48 +141,48 @@ def classify_solubility_dataset(df, limits_dictionary):
         pred_class = row['Predicted_Class']
         lower_limit = row['Lower_Limit_Class']
         
-        # Scenario 1: Error margin contained within the same zone
+ # Scenario 1: Error margin contained within the same zone
         if lower_limit == row['Upper_Class_Temp']:
             alert_name = "HIGH PREDICTIVE RELIABILITY"
             description = (
-                f" The AI predicts {row['LogS_pred']:.2f}. The error margin is contained within the same "
+                f"The AI predicts {row['LogS_pred']:.2f}. The error margin is contained within the same "
                 f"solubility class ({pred_class}). The molecule should behave as expected in biological assays."
             )
-            # Inserted tag (based on reliability groups)
-            class_tag = row['Upper_Class_Temp']
+            # Tag atualizada: Como não muda de classe, exibe apenas a classe com confiança
+            class_tag = f"{pred_class}" 
             return alert_name, description, class_tag
             
         # Scenario 2: Error crosses class boundaries
         elif pred_class != lower_limit:
             
-            # 2A. Worst-case scenario falls into severe insolubility (Classes 5-6)
-            if "Low Solubility" in lower_limit:
+           # 2A. Worst-case scenario falls into severe insolubility (Classes 5-6)
+            if "Low Solubility" in lower_limit or "Insoluble" in lower_limit:
                 alert_name = "INSOLUBILITY RISK"
                 description = (
-                    f" The AI predicts {row['LogS_pred']:.2f} ({row['Predicted_Class']}), but the error margin "
+                    f"The AI predicts {row['LogS_pred']:.2f} ({row['Predicted_Class']}), but the error margin "
                     f"reaches the Critical Insolubility zone. Experimental validation is recommended."
                 )
-                # Inserted tag (worst extrapolation scenario)
-                class_tag = f"{row['Predicted_Class']}-Insoluble"
+                # Tag atualizada: Usa o "to" para o pior cenário
+                class_tag = f"{row['Predicted_Class']} to Insoluble"
                 return alert_name, description, class_tag
                 
             # 2B. Error fluctuates but does not invalidate assays (Classes 0-4)
             else:
                 alert_name = "FORMULATION IMPACT"
                 description = (
-                    f" The AI predicts {row['LogS_pred']:.2f} ({row['Predicted_Class']}) and has an error margin that extends "
+                    f"The AI predicts {row['LogS_pred']:.2f} ({row['Predicted_Class']}) and has an error margin that extends "
                     f"to the '{lower_limit}' class."
                 )
-                # Inserted tag
-                class_tag = f"{row['Predicted_Class']}-{row['Lower_Limit_Class']}"
+                # Tag atualizada: Troca o "-" por "to" para leitura mais fluida
+                class_tag = f"{row['Predicted_Class']} to {row['Lower_Limit_Class']}"
                 return alert_name, description, class_tag
                 
         # Scenario 3: Safety fallback
         else:
             alert_name = "MODERATE PREDICTIVE RELIABILITY"
             description = "The error margin suggests caution in the initial interpretation for biological assays."
-            # Inserted tag
-            class_tag = "Group B"
+            # Tag atualizada: Substitui o "Group B" por uma instrução clara para a UI
+            class_tag = f"{row['Predicted_Class']}"
             return alert_name, description, class_tag
 
     # Temporary column to allow row-wise comparison

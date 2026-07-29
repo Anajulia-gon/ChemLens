@@ -6,14 +6,49 @@ export interface ParsedCsvMolecule {
 const SMILES_HEADER_RE = /smiles/i;
 const NAME_HEADER_RE = /(nome|name)/i;
 
+/**
+ * Divide uma linha de CSV respeitando campos entre aspas — uma vírgula dentro
+ * de um campo como `"(S)-butane-1,3-diol"` não pode contar como separador de
+ * coluna, senão desalinha todas as colunas seguintes da linha (aspas duplas
+ * repetidas `""` dentro de um campo entre aspas viram uma aspas literal,
+ * como no formato CSV padrão).
+ */
 function splitCsvRow(line: string): string[] {
-  return line.split(",").map((cell) => cell.trim().replace(/^"|"$/g, ""));
+  const cells: string[] = [];
+  let current = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (inQuotes) {
+      if (char === '"') {
+        if (line[i + 1] === '"') {
+          current += '"';
+          i++;
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        current += char;
+      }
+    } else if (char === '"') {
+      inQuotes = true;
+    } else if (char === ",") {
+      cells.push(current.trim());
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+  cells.push(current.trim());
+  return cells;
 }
 
 /**
- * Parser de CSV simples (sem suporte a vírgulas dentro de campos com aspas).
- * Detecta uma coluna "smiles" pelo cabeçalho; se não houver cabeçalho, assume
- * que a primeira coluna já é o SMILES (mesmo formato do exemplo do Briefing.md).
+ * Parser de CSV com suporte a campos entre aspas (vírgulas e aspas escapadas
+ * dentro do campo). Detecta uma coluna "smiles" pelo cabeçalho; se não houver
+ * cabeçalho, assume que a primeira coluna já é o SMILES (mesmo formato do
+ * exemplo do Briefing.md).
  */
 export function parseMoleculesFromCsv(text: string): ParsedCsvMolecule[] {
   const lines = text

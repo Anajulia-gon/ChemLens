@@ -9,9 +9,9 @@ interface TabBarProps {
 }
 
 const TABS: { key: ActiveTab; label: string }[] = [
+  { key: "arquivo", label: "File" },
   { key: "smiles", label: "Smiles" },
-  { key: "arquivo", label: "Arquivo" },
-  { key: "desenho", label: "Desenho" },
+  // { key: "desenho", label: "Draw" },
 ];
 
 export function TabBar({ activeTab, onSelect }: TabBarProps) {
@@ -46,7 +46,7 @@ export function TabBar({ activeTab, onSelect }: TabBarProps) {
               justifyContent: "center",
               alignItems: "center",
               cursor: "pointer",
-              fontSize: 16,
+              fontSize: 18,
               fontWeight: 600,
               transition: "all .15s",
               background: isActive ? colors.ink : "transparent",

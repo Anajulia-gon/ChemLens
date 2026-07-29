@@ -1,0 +1,13 @@
+{
+  "dataset": "ESOL/Delaney (deepchem/deepchem, 1128 mol\u00e9culas, solubilidade medida)",
+  "n_train": 789,
+  "n_calibration": 169,
+  "n_test": 170,
+  "n_raw_descriptors": 216,
+  "n_final_descriptors": 150,
+  "conformal_confidence": 0.9,
+  "conformal_q": 0.4778923050775806,
+  "test_mae": 0.46620922231904055,
+  "test_r2": 0.9042906439403607,
+  "test_interval_coverage": 0.9058823529411765
+}
