@@ -34,11 +34,12 @@ excesso de cautela nem avançar com moléculas problemáticas.
    (Lipinski/Veber/Ghose), intervalo de incerteza e alertas estruturais
    (PAINS, Brenk, átomos tóxicos, regras de leadlikeness) ⚗️.
 
-📄 Veja [Briefing.md](Briefing.md) para o levantamento de requisitos completo
-do projeto (objetivo, cenário, requisitos funcionais e não-funcionais).
-
 ## 🏗️ Arquitetura
 
+- **📚 `pipeline.py` / `toolsinterface.py`** — script de referência
+  standalone (fora da API) com a mesma lógica de cálculo de descritores e
+  classificação, usado como base/validação do que está implementado em
+  `backend/`.
 - **🖥️ `frontend/`** — Next.js (App Router) + TypeScript. Interface web
   completa: input de moléculas, acompanhamento do pipeline em tempo real,
   dashboard de resultados e histórico de estudos.
@@ -46,10 +47,6 @@ do projeto (objetivo, cenário, requisitos funcionais e não-funcionais).
   e streama o progresso via NDJSON. Veja
   [backend/README.md](backend/README.md) para detalhes de setup, endpoints e
   estrutura interna.
-- **📚 `pipeline.py` / `toolsinterface.py`** — script de referência
-  standalone (fora da API) com a mesma lógica de cálculo de descritores e
-  classificação, usado como base/validação do que está implementado em
-  `backend/`.
 
 ## ▶️ Como executar o sistema
 
