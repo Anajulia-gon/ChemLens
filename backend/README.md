@@ -6,26 +6,54 @@ aquosa + quantificação de incerteza, chamada pelo frontend ao clicar em
 
 ## Importante: sobre o modelo
 
-`pipeline.py`/`toolsinterface.py` (na raiz do repo) descrevem o pipeline de
-referência, mas carregam artefatos treinados (`model_external_run_1.joblib`,
-`modelo_rf_159rdkit.joblib`, `descritores_finais_159.json`, um CSV de
-calibração e o dataset DrugBank) que **não existem neste repositório** — o
-treino original foi feito em outro ambiente.
+A API roda `pipeline.py`/`toolsinterface.py` (na raiz do repo) **diretamente**
+via `reference_model.py` — mesmas funções (`calculate_descritors`,
+`calculate_missing_descriptors`, `generate_chemical_properties_and_warnings`,
+`ConformalPredictorESD`) e mesmos artefatos treinados externamente
+(`model_external_run_1.joblib`, `scaler_external_run_1.joblib`,
+`modelo_rf_159rdkit.joblib`), que devem estar na raiz do repo, na mesma pasta
+que `pipeline.py`/`toolsinterface.py`. `toolsinterface.py`/`pipeline.py`
+**não são modificados** — `reference_model.py` contorna, por fora, dois
+problemas do ambiente original:
 
-Para termos uma predição real (não uma simulação com números inventados),
-`train_models.py` treina, do zero, artefatos com a mesma arquitetura usando o
-dataset público **ESOL/Delaney** (1128 moléculas com solubilidade medida
-experimentalmente — benchmark padrão da literatura). Métricas do último
-treino ficam em `models/training_report.json`.
+- `descritores_finais_159.json` (lista ordenada dos 159 descritores RDKit
+  usados no treino) não existe no repositório — foi reconstruída a partir de
+  `scaler_159rdkiy.joblib.feature_names_in_` (o scaler do modelo de erro foi
+  o único artefato que preservou os nomes das colunas de treino).
+- `colunas_para_calibração.csv` (dataset de calibração do preditor conformal)
+  também não existe — é gerado a partir do dataset público **ESOL/Delaney**
+  (1128 moléculas com solubilidade medida experimentalmente) na primeira
+  execução e cacheado na raiz do repo para as próximas.
 
-Quando os artefatos originais estiverem disponíveis, basta trocá-los pelos
-seus em `models/` (mesmos nomes de arquivo) — o resto do pipeline não muda.
+`train_models.py`/`descriptors.py`/`chemistry.py`/`conformal.py` continuam no
+repositório como caminho alternativo (treina artefatos próprios do zero) mas
+não são mais usados pela API enquanto os artefatos externos acima existirem.
+
+**Importante sobre a versão do scikit-learn**: os joblib externos foram
+serializados com `scikit-learn==1.7.1`. Rodar com uma versão diferente (ex.:
+1.6.1, a mais recente disponível para Python 3.9) muda o valor de LogS
+previsto — testado e confirmado: a mesma molécula deu -1.94 com sklearn 1.6.1
+e -2.70 (correto) com 1.7.1. **scikit-learn 1.7.1 exige Python 3.10+** — por
+isso o venv do projeto usa **Python 3.11**. O RDKit não influencia o
+resultado (testado com 2023.3.3/2025.9.2/2026.3.4, descritores idênticos),
+mas fixamos `rdkit==2023.3.3` por ser a versão usada no treino original.
+`numpy==1.26.4` também é fixado por ser a versão usada pelo autor original
+(além de ser exigência do próprio `rdkit==2023.3.3`, cujo wheel não é
+compatível com numpy 2.x).
 
 ## Setup
 
 ```bash
-source ../.venv/bin/activate   # ambiente virtual já existe na raiz do repo
+python3.11 -m venv ../.venv        # precisa ser Python 3.11 (ver acima)
+source ../.venv/bin/activate
 pip install -r requirements.txt
+```
+
+`model_external_run_1.joblib` depende de `xgboost`/`lightgbm` (no
+`requirements.txt`). No macOS, o xgboost também precisa do OpenMP do sistema:
+
+```bash
+brew install libomp
 ```
 
 ## Treinar (gera os artefatos em models/)
@@ -56,12 +84,10 @@ código).
 
 ## Estrutura
 
+- `reference_model.py` — carrega e chama `pipeline.py`/`toolsinterface.py` (raiz do repo) diretamente: descritores, modelo primário, modelo de erro, calibração conformal.
 - `domain.py` — constantes (classes de solubilidade, faixas de referência do radar).
-- `descriptors.py` — cálculo de descritores RDKit.
-- `chemistry.py` — alertas PAINS/Brenk, átomos tóxicos, regras de leadlikeness.
-- `conformal.py` — `ConformalPredictorESD` (portado de toolsinterface.py).
-- `classification.py` — classificação de solubilidade + alerta de confiabilidade.
+- `classification.py` — classificação de solubilidade + alerta de confiabilidade (porte per-molécula de `toolsinterface.py::classify_solubility_dataset`).
 - `novelty.py` — detecta se o SMILES é "inédito" (fora do dataset de treino/`models/known_smiles.json`).
 - `storage.py` — salva/lista/carrega/apaga estudos em `studies/*.json`.
-- `train_models.py` — treina e salva os artefatos em `models/`.
 - `app.py` — API FastAPI.
+- `descriptors.py` / `chemistry.py` / `conformal.py` / `train_models.py` — caminho alternativo (treina artefatos próprios do zero com o dataset ESOL/Delaney); não usados enquanto os artefatos externos em `../` existirem.

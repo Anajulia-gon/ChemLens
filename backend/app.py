@@ -1,43 +1,34 @@
 """
 Aqueous solubility prediction API + uncertainty quantification (UQ).
 
-Implements the same flow as pipeline.py: RDKit descriptors -> primary model
-(stacking) -> error model -> conformal interval (ESD) -> classification and
-alerts. Trained artifacts come from `train_models.py` (see there for why).
+Runs pipeline.py/toolsinterface.py's actual functions and trained artifacts
+directly (see reference_model.py) — RDKit descriptors -> primary model
+(stacking, model_external_run_1.joblib) -> error model
+(modelo_rf_159rdkit.joblib) -> conformal interval (ESD) -> classification and
+alerts, all via toolsinterface.py itself, not a reimplementation.
 """
 from __future__ import annotations
 
 import json
-import os
 import re
 from typing import Optional
 
-import joblib
 import numpy as np
-import pandas as pd
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from rdkit import Chem
 
+import reference_model as rm
 import storage
-from chemistry import generate_chemical_properties_and_warnings
 from classification import generate_status
-from descriptors import calculate_descriptors, calculate_missing_descriptors, load_descriptor_names, make_calculator
 from domain import RADAR_AXES, RADAR_REFERENCE_RANGES, SOLUBILITY_LABELS_EN
 from novelty import canonical_smiles, load_known_smiles
 
-HERE = os.path.dirname(__file__)
-MODELS_DIR = os.path.join(HERE, "models")
 INVISIBLE_CHARS = re.compile("[​-‏⁠﻿ ]")
 
-DESCRIPTOR_NAMES = load_descriptor_names()
-CALCULATOR = make_calculator(DESCRIPTOR_NAMES)
-SCALER = joblib.load(os.path.join(MODELS_DIR, "scaler_primary.joblib"))
-MODEL_PRIMARY = joblib.load(os.path.join(MODELS_DIR, "model_primary.joblib"))
-MODEL_ERROR = joblib.load(os.path.join(MODELS_DIR, "model_error.joblib"))
-CONFORMAL = joblib.load(os.path.join(MODELS_DIR, "conformal_calibrator.joblib"))
+DESCRIPTOR_NAMES = rm.DESCRIPTOR_NAMES
 KNOWN_SMILES = load_known_smiles()
 
 app = FastAPI(title="ChemLens - Solubility Prediction")
@@ -69,11 +60,12 @@ def normalize_smiles(raw: str) -> str:
 
 def compute_display_descriptors(mol) -> dict:
     """The 11 'friendly' descriptors pipeline.py explicitly renames, used in
-    the table/radar of physico-chemical properties — computed directly
-    (independent of which 150 descriptors the ML model actually uses)."""
+    the table/radar of physico-chemical properties — computed directly via
+    toolsinterface.calculate_missing_descriptors (independent of which 159
+    descriptors the ML model actually uses)."""
     from rdkit.Chem import Descriptors
 
-    missing = calculate_missing_descriptors(Chem.MolToSmiles(mol))
+    missing = rm.calculate_missing_descriptors(Chem.MolToSmiles(mol))
     return {
         "MolWt": round(Descriptors.MolWt(mol), 2),
         "nRig": missing["nRig"],
@@ -157,8 +149,8 @@ def run_predict_pipeline(payload: PredictRequest):
     # be parseable by RDKit, (2) the computed descriptors must all be finite
     # numbers — some unusual structures make certain RDKit descriptors blow
     # up to infinity, and that must NOT crash the prediction for the other
-    # molecules in the same batch (SCALER.transform/predict run in batch — a
-    # single bad row used to crash the whole request).
+    # molecules in the same batch (the scaler/model run in batch — a single
+    # bad row used to crash the whole request).
     valid_items = []
     for item in payload.molecules:
         smi = normalize_smiles(item.smiles)
@@ -167,7 +159,7 @@ def run_predict_pipeline(payload: PredictRequest):
             invalid.append({"id": item.id, "smiles": item.smiles, "name": item.name, "reason": "Invalid SMILES"})
             continue
 
-        descriptor_vector = np.asarray(calculate_descriptors(smi, CALCULATOR, len(DESCRIPTOR_NAMES)), dtype=float)
+        descriptor_vector = np.asarray(rm.calculate_descriptor_vector(smi), dtype=float)
         if not np.any(np.isfinite(descriptor_vector)):
             # Cálculo falhou por completo (ex.: RDKit não consegue processar a
             # estrutura de jeito nenhum) — isso sim é inutilizável.
@@ -196,18 +188,10 @@ def run_predict_pipeline(payload: PredictRequest):
     yield _progress_line("Validating structures and computing molecular descriptors (RDKit)...", 20)
 
     if valid_items:
-        raw_vectors = pd.DataFrame(
-            [vector for _, _, _, vector in valid_items],
-            columns=DESCRIPTOR_NAMES,
-        )
-        scaled_vectors = SCALER.transform(raw_vectors)
-        logs_pred = MODEL_PRIMARY.predict(scaled_vectors)
+        smiles_batch = [smi for _, smi, _, _ in valid_items]
+        logs_pred, lower_bounds, upper_bounds = rm.predict_batch(smiles_batch)
         yield _progress_line("Applying the scaler and the primary model (stacking + Lasso)...", 40)
-
-        uncertainty_pred = MODEL_ERROR.predict(raw_vectors)
         yield _progress_line("Estimating the model's error (Random Forest)...", 55)
-
-        lower_bounds, upper_bounds = CONFORMAL.predict_interval(logs_pred, uncertainty_pred)
         yield _progress_line("Computing the conformal margin (UQ, 90% confidence)...", 68)
 
         n = len(valid_items)
@@ -220,7 +204,7 @@ def run_predict_pipeline(payload: PredictRequest):
             margin = (upper - lower) / 2
 
             reliability = generate_status(logs, lower, upper)
-            chem = generate_chemical_properties_and_warnings(smi)
+            chem = rm.generate_chemical_properties_and_warnings(smi)
             display_desc = compute_display_descriptors(mol)
             display_desc["logS"] = round(logs, 2)
             is_novel = canonical_smiles(smi) not in KNOWN_SMILES

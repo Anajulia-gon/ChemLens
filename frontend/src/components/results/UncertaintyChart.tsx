@@ -7,9 +7,9 @@ interface UncertaintyChartProps {
   upperBound: number;
 }
 
-// Régua fixa do eixo (-8 a +5) — não se expande com os dados; predições ou
+// Régua fixa do eixo (-9 a +5) — não se expande com os dados; predições ou
 // limites fora dessa faixa apenas ficam visualmente presos na borda da barra.
-const AXIS_MIN = -8;
+const AXIS_MIN = -9;
 const AXIS_MAX = 5;
 
 const ZONE_COLORS = [colors.statusRiskAlert, colors.statusReviewSuggested, colors.statusHighConfidence];

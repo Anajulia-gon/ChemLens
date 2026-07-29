@@ -38,9 +38,11 @@ document (objective, scenario, functional and non-functional requirements).
 
 ## 🏗️ Architecture
 
-- **📚 `pipeline.py` / `toolsinterface.py`** — standalone reference script
-  (outside the API) with the same descriptor computation and classification
-  logic, used as the basis/validation for what's implemented in `backend/`.
+- **📚 `pipeline.py` / `toolsinterface.py`** — reference implementation, run
+  **directly** by the API (via `backend/reference_model.py`) together with
+  the externally-trained model artifacts (`model_external_run_1.joblib`,
+  `scaler_external_run_1.joblib`, `modelo_rf_159rdkit.joblib`), which must
+  live in the repo root alongside these two files.
 - **🖥️ `frontend/`** — Next.js (App Router) + TypeScript. Full web
   interface: molecule input, real-time pipeline tracking, results dashboard
   and study history.
@@ -51,7 +53,9 @@ document (objective, scenario, functional and non-functional requirements).
 
 ## ▶️ How to run the system
 
-Prerequisites: 🐍 Python 3.10+ and 🟩 Node.js 20+.
+Prerequisites: 🐍 Python 3.11 (the trained model artifacts require
+`scikit-learn==1.7.1`, only available from Python 3.10+ — see
+[backend/README.md](backend/README.md)) and 🟩 Node.js 20+.
 
 ### 1️⃣ Backend (prediction API)
 
