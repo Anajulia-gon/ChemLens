@@ -1,78 +1,79 @@
 # 🔬 ChemLens
 
-Plataforma web para predição de solubilidade aquosa (LogS) com Quantificação
-de Incerteza (UQ) 📊, voltada a farmacêuticos e químicos medicinais para
-triagem e priorização de compostos candidatos a medicamentos 💊.
+Web platform for aqueous solubility (LogS) prediction with Uncertainty
+Quantification (UQ) 📊, built for pharmacists and medicinal chemists to
+screen and prioritize drug candidate compounds 💊.
 
-## 🧪 O que o projeto faz
+## 🧪 What the project does
 
-A solubilidade aquosa é uma propriedade físico-química central na
-biodisponibilidade de fármacos, mas modelos de Machine Learning para
-propriedades ADMET costumam sofrer com mudanças de distribuição (*data
-shifts*) quando aplicados a moléculas reais fora do seu domínio de
-treinamento — o que torna arriscado ⚠️ confiar cegamente em uma predição
-pontual.
+Aqueous solubility is a core physicochemical property for drug
+bioavailability, but Machine Learning models for ADMET properties often
+suffer from distribution shifts (*data shifts*) when applied to real
+molecules outside their training domain — which makes it risky ⚠️ to blindly
+trust a single point prediction.
 
-O ChemLens ataca esse problema entregando, para cada molécula, não só o valor
-de LogS previsto, mas também uma margem de erro estimada e um veredito de
-confiabilidade (🟢 Alta Confiança / 🟡 Revisão Sugerida / 🔴 Alerta de Risco),
-permitindo priorizar compostos sem descartar candidatos promissores por
-excesso de cautela nem avançar com moléculas problemáticas.
+ChemLens tackles this by delivering, for every molecule, not just the
+predicted LogS value, but also an estimated error margin and a reliability
+verdict (🟢 High Confidence / 🟡 Review Suggested / 🔴 Risk Alert), letting
+you prioritize compounds without discarding promising candidates out of
+excess caution, or advancing problematic molecules.
 
-### 🚀 Fluxo do usuário
+### 🚀 User flow
 
-1. **📥 Enviar moléculas** — via SMILES colado, upload de arquivo
-   `.csv`/`.sdf` ou desenho estrutural interativo.
-2. **⚙️ Processamento real** — cálculo de descritores moleculares (RDKit),
-   modelo primário (stacking + Lasso), modelo de erro (Random Forest) e
-   margem conformal (90% de confiança), com progresso genuíno reportado pelo
-   backend em cada etapa.
-3. **📋 Resultados e confiabilidade** — tabela com LogS, LogP, peso molecular
-   e status de confiabilidade por molécula.
-4. **🔍 Detalhes por molécula** — estrutura 2D, radar de propriedades
-   físico-químicas contra faixas farmacológicas de referência
-   (Lipinski/Veber/Ghose), intervalo de incerteza e alertas estruturais
-   (PAINS, Brenk, átomos tóxicos, regras de leadlikeness) ⚗️.
+1. **📥 Submit molecules** — via pasted SMILES, `.csv`/`.sdf` file upload, or
+   interactive structure drawing.
+2. **⚙️ Real processing** — molecular descriptor computation (RDKit),
+   primary model (stacking + Lasso), error model (Random Forest) and
+   conformal margin (90% confidence), with genuine progress reported by the
+   backend at every stage.
+3. **📋 Results and reliability** — table with LogS, LogP, molecular weight
+   and reliability status per molecule.
+4. **🔍 Per-molecule details** — 2D structure, physicochemical property radar
+   against pharmacological reference ranges (Lipinski/Veber/Ghose),
+   uncertainty interval and structural alerts (PAINS, Brenk, toxic atoms,
+   leadlikeness rules) ⚗️.
 
-## 🏗️ Arquitetura
+📄 See [Briefing.md](Briefing.md) for the full requirements gathering
+document (objective, scenario, functional and non-functional requirements).
 
-- **📚 `pipeline.py` / `toolsinterface.py`** — script de referência
-  standalone (fora da API) com a mesma lógica de cálculo de descritores e
-  classificação, usado como base/validação do que está implementado em
-  `backend/`.
-- **🖥️ `frontend/`** — Next.js (App Router) + TypeScript. Interface web
-  completa: input de moléculas, acompanhamento do pipeline em tempo real,
-  dashboard de resultados e histórico de estudos.
-- **⚡ `backend/`** — API Python (FastAPI). Roda o pipeline real de predição
-  e streama o progresso via NDJSON. Veja
-  [backend/README.md](backend/README.md) para detalhes de setup, endpoints e
-  estrutura interna.
+## 🏗️ Architecture
 
-## ▶️ Como executar o sistema
+- **📚 `pipeline.py` / `toolsinterface.py`** — standalone reference script
+  (outside the API) with the same descriptor computation and classification
+  logic, used as the basis/validation for what's implemented in `backend/`.
+- **🖥️ `frontend/`** — Next.js (App Router) + TypeScript. Full web
+  interface: molecule input, real-time pipeline tracking, results dashboard
+  and study history.
+- **⚡ `backend/`** — Python API (FastAPI). Runs the actual prediction
+  pipeline and streams progress via NDJSON. See
+  [backend/README.md](backend/README.md) for setup details, endpoints and
+  internal structure.
 
-Pré-requisitos: 🐍 Python 3.10+ e 🟩 Node.js 20+.
+## ▶️ How to run the system
 
-### 1️⃣ Backend (API de predição)
+Prerequisites: 🐍 Python 3.10+ and 🟩 Node.js 20+.
+
+### 1️⃣ Backend (prediction API)
 
 ```bash
 cd backend
-python -m venv ../.venv          # se ainda não existir um ambiente virtual
+python -m venv ../.venv          # if a virtual environment doesn't exist yet
 source ../.venv/bin/activate     # Windows: ..\.venv\Scripts\activate
 pip install -r requirements.txt
 
-# Se backend/models/ ainda não tiver os artefatos treinados, gere-os:
+# If backend/models/ doesn't have the trained artifacts yet, generate them:
 python train_models.py
 
 uvicorn app:app --port 8000
 ```
 
-✅ A API sobe em `http://localhost:8000` (CORS já liberado para
-`http://localhost:3000`). Endpoints principais: `GET /health`,
-`POST /predict`, `GET /studies`, `GET /studies/{id}`, `DELETE /studies/{id}`.
+✅ The API runs on `http://localhost:8000` (CORS already open for
+`http://localhost:3000`). Main endpoints: `GET /health`, `POST /predict`,
+`GET /studies`, `GET /studies/{id}`, `DELETE /studies/{id}`.
 
-### 2️⃣ Frontend (interface web)
+### 2️⃣ Frontend (web interface)
 
-Em um segundo terminal:
+In a second terminal:
 
 ```bash
 cd frontend
@@ -80,11 +81,11 @@ npm install
 npm run dev
 ```
 
-🌐 Acesse `http://localhost:3000` — o frontend espera o backend rodando em
-`http://localhost:8000`.
+🌐 Open `http://localhost:3000` — the frontend expects the backend running
+on `http://localhost:8000`.
 
-### 3️⃣ Uso
+### 3️⃣ Usage
 
-🎯 Com os dois serviços no ar, abra `http://localhost:3000`, envie moléculas
-por SMILES, `.csv`/`.sdf` ou desenho, e acompanhe a predição no dashboard de
-resultados.
+🎯 With both services running, open `http://localhost:3000`, submit
+molecules via SMILES, `.csv`/`.sdf` or drawing, and follow the prediction in
+the results dashboard.
