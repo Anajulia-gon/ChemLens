@@ -5,6 +5,7 @@ import { codGray, colors } from "@/lib/theme";
 import { useResolvedNames } from "@/hooks/useResolvedName";
 import { queueNameResolution } from "@/lib/nameResolver";
 import { deleteMolecules } from "@/lib/api";
+import { classTagColor } from "@/lib/solubility";
 import { InfoIcon } from "../InfoIcon";
 import type { MoleculeResult, PredictionResponse, RadarRange, ReliabilityStatus } from "@/types/prediction";
 import { ArrowRightIcon, CheckIcon, FilterIcon, SearchIcon } from "../icons";
@@ -356,10 +357,10 @@ export function ResultsDashboard({ studyId, results, radarAxes, radarRanges, onM
                 <span style={{ width: 46 }}>{m.descriptors.MolLogP.toFixed(2)}</span>
                 <InfoIcon text={INFO_TEXT.LogP} />
               </div>
-              <div style={{ flex: 1, display: "flex", alignItems: "baseline", color: codGray[800], paddingRight: 12 }}>
-                <span style={{ width: 96 }}>
+              <div style={{ flex: 1, display: "flex", alignItems: "baseline", paddingRight: 12 }}>
+                <span style={{ width: 96, color: classTagColor(m.classTag), fontWeight: 600 }}>
                   {m.logS.toFixed(2)}{" "}
-                  <span style={{ fontSize: 12, color: codGray[500] }}>± {m.margin.toFixed(2)}</span>
+                  <span style={{ fontSize: 12, fontWeight: 400 }}>± {m.margin.toFixed(2)}</span>
                 </span>
                 <span style={{ display: "inline-flex", alignItems: "center" }}>
                   <InfoIcon text={INFO_TEXT.LogS} />

@@ -217,10 +217,12 @@ export function DetailPanel({ molecule, radarAxes, radarRanges, onOpenImage, onO
         <div style={{ padding: "20px 24px 24px" }}>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
             <div style={{ display: "flex", alignItems: "baseline", gap: 14 }}>
-              <span style={{ fontWeight: 800, fontSize: 83, color: codGray[900], lineHeight: 1 }}>
+              <span style={{ fontWeight: 800, fontSize: 83, color: classTagColor(molecule.classTag), lineHeight: 1 }}>
                 {molecule.logS.toFixed(2)}
               </span>
-              <span style={{ fontWeight: 400, fontSize: 34, color: codGray[800] }}>± {molecule.margin.toFixed(2)}</span>
+              <span style={{ fontWeight: 400, fontSize: 34, color: classTagColor(molecule.classTag) }}>
+                ± {molecule.margin.toFixed(2)}
+              </span>
             </div>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 5 }}>
               <span

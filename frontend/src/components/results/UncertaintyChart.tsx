@@ -71,7 +71,16 @@ export function UncertaintyChart({ logS, lowerBound, upperBound }: UncertaintyCh
     ticks.push(Math.round(v));
   }
 
-  const gradient = `linear-gradient(to right, ${ZONE_COLORS[0]} 0%, ${ZONE_COLORS[1]} ${b1Pct}%, ${ZONE_COLORS[2]} ${b2Pct}%, ${ZONE_COLORS[2]} 100%)`;
+  // Transição de cor concentrada bem em cima da linha tracejada de cada
+  // fronteira (não espalhada pela zona inteira) — assim a cor de cada trecho
+  // da barra reflete de fato os limites de SOLUBILITY_ZONE_BOUNDARIES, em vez
+  // de já começar a misturar com a próxima zona logo no início dela.
+  const TRANSITION_PCT = 5;
+  const gradient = `linear-gradient(to right,
+    ${ZONE_COLORS[0]} ${Math.max(0, b1Pct - TRANSITION_PCT)}%,
+    ${ZONE_COLORS[1]} ${Math.min(100, b1Pct + TRANSITION_PCT)}%,
+    ${ZONE_COLORS[1]} ${Math.max(0, b2Pct - TRANSITION_PCT)}%,
+    ${ZONE_COLORS[2]} ${Math.min(100, b2Pct + TRANSITION_PCT)}%)`;
 
   const zoneSpans: [number, number][] = [
     [0, b1Pct],
