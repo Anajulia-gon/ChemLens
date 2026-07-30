@@ -1,6 +1,6 @@
 # 🔬 ChemLens
 
-A web-based platform for ADMET property screening—currently specialized in aqueous solubility (LogS), powered by advanced Uncertainty Quantification (UQ)[cite: 4, 5]. Designed to help medicinal chemists and researchers confidently prioritize drug candidates 💊[cite: 4].
+A web-based platform for ADMET property screening, currently specialized in aqueous solubility (LogS), powered by advanced Uncertainty Quantification (UQ)[cite: 4, 5]. Designed to help medicinal chemists and researchers confidently prioritize drug candidates 💊[cite: 4].
 
 ## 🧪 What the project does
 
@@ -14,8 +14,8 @@ By providing explicit prediction intervals and flagging high-risk outliers, Chem
 
 ChemLens is driven by a highly optimized backend, validated against industry-standard benchmarks to ensure state-of-the-art accuracy and reliability[cite: 5]:
 
-*   **Primary Predictor (Solubility Inference):** The core engine utilizes a Stacking-Lasso regression model trained on 159 continuous RDKit descriptors[cite: 5]. It achieves an outstanding RMSE of **0.909** on the external DrugBank dataset—comfortably outperforming standard literature models that typically score between 1.029 and 1.579[cite: 5]. It also maintains strong generalization with an RMSE of **0.801** on the SC2-1 and **1.029** on the SC2-2 datasets[cite: 5].
-*   **Auxiliary Error Model (UQ Engine):** To map out generalization limits, a dedicated Error Model is trained to predict the residual errors of the primary network[cite: 4, 5]. It achieves a mean Spearman's rank correlation coefficient (SRCC) of **0.48**, massively outperforming traditional metrics like Euclidean distance to the training set (0.08) or ensemble variance (0.14)[cite: 5]. When evaluating severe distribution shifts—such as salts and zwitterions—its SRCC reaches up to **0.9**, proving its capacity to flag structural outliers effectively[cite: 5].
+*   **Primary Predictor (Solubility Inference):** The core engine utilizes a Stacking-Lasso regression model trained on 159 continuous RDKit descriptors[cite: 5]. It achieves an outstanding RMSE of **0.909** on the external DrugBank dataset, comfortably outperforming standard literature models that typically score between 1.029 and 1.579[cite: 5]. It also maintains strong generalization with an RMSE of **0.801** on the SC2-1 and **1.029** on the SC2-2 datasets[cite: 5].
+*   **Auxiliary Error Model (UQ Engine):** To map out generalization limits, a dedicated Error Model is trained to predict the residual errors of the primary network[cite: 4, 5]. It achieves a mean Spearman's rank correlation coefficient (SRCC) of **0.48**, massively outperforming traditional metrics like Euclidean distance to the training set (0.08) or ensemble variance (0.14)[cite: 5]. When evaluating severe distribution shifts, such as salts and zwitterions, its SRCC reaches up to **0.9**, proving its capacity to flag structural outliers effectively[cite: 5].
 
 📂 **[Click here to access the detailed Training, Cross-Validation, and Performance Results folder](./training_results)**
 
