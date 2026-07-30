@@ -1,40 +1,40 @@
 # 🔬 ChemLens
 
-Web platform for aqueous solubility (LogS) prediction with Uncertainty
-Quantification (UQ) 📊, built for pharmacists and medicinal chemists to
-screen and prioritize drug candidate compounds 💊.
+A web-based platform for ADMET property screening—currently specialized in aqueous solubility (LogS), powered by advanced Uncertainty Quantification (UQ)[cite: 4, 5]. Designed to help medicinal chemists and researchers confidently prioritize drug candidates 💊[cite: 4].
 
 ## 🧪 What the project does
 
-Aqueous solubility is a core physicochemical property for drug
-bioavailability, but Machine Learning models for ADMET properties often
-suffer from distribution shifts (*data shifts*) when applied to real
-molecules outside their training domain — which makes it risky ⚠️ to blindly
-trust a single point prediction.
+The pipeline of pre-clinical drug discovery is notoriously expensive and time-consuming, driving the industry to rely on Artificial Intelligence to accelerate chemical screening[cite: 5]. However, a major bottleneck remains: researchers struggle to trust these algorithms[cite: 5]. Because the chemical space is vast and highly complex, standard machine learning models often act as "black boxes"[cite: 1, 5]. When they encounter a novel compound completely outside their training data, they might still output a highly confident (but entirely wrong) prediction, leading to wasted laboratory resources[cite: 5].
 
-ChemLens tackles this by delivering, for every molecule, not just the
-predicted LogS value, but also an estimated error margin and a reliability
-verdict (🟢 High Confidence / 🟡 Review Suggested / 🔴 Risk Alert), letting
-you prioritize compounds without discarding promising candidates out of
-excess caution, or advancing problematic molecules.
+ChemLens was built to solve this exact trust barrier[cite: 5]. Rather than simply estimating an ADMET property, our platform runs on a unique **Dual-AI architecture**[cite: 4, 5]. A primary model performs the target prediction, while a completely independent secondary model calculates how reliable that specific prediction actually is[cite: 4, 5].
 
-### 🚀 User flow
+By providing explicit prediction intervals and flagging high-risk outliers, ChemLens allows scientists to filter out false positives and make data-driven decisions without second-guessing the algorithm[cite: 4, 5]. Looking forward, this robust approach to uncertainty quantification is a foundational stepping stone toward fully automated chemistry labs and autonomous design–make–test–analyze (DMTA) cycles[cite: 5].
 
-1. **📥 Submit molecules** — via pasted SMILES, `.csv`/`.sdf` file upload, or
-   interactive structure drawing.
-2. **⚙️ Real processing** — molecular descriptor computation (RDKit),
-   primary model (stacking + Lasso), error model (Random Forest) and
-   conformal margin (90% confidence), with genuine progress reported by the
-   backend at every stage.
-3. **📋 Results and reliability** — table with LogS, LogP, molecular weight
-   and reliability status per molecule.
-4. **🔍 Per-molecule details** — 2D structure, physicochemical property radar
-   against pharmacological reference ranges (Lipinski/Veber/Ghose),
-   uncertainty interval and structural alerts (PAINS, Brenk, toxic atoms,
-   leadlikeness rules) ⚗️.
+## 🧠 Model Architecture & Performance
 
-📄 See [Briefing.md](Briefing.md) for the full requirements gathering
-document (objective, scenario, functional and non-functional requirements).
+ChemLens is driven by a highly optimized backend, validated against industry-standard benchmarks to ensure state-of-the-art accuracy and reliability[cite: 5]:
+
+*   **Primary Predictor (Solubility Inference):** The core engine utilizes a Stacking-Lasso regression model trained on 159 continuous RDKit descriptors[cite: 5]. It achieves an outstanding RMSE of **0.909** on the external DrugBank dataset—comfortably outperforming standard literature models that typically score between 1.029 and 1.579[cite: 5]. It also maintains strong generalization with an RMSE of **0.801** on the SC2-1 and **1.029** on the SC2-2 datasets[cite: 5].
+*   **Auxiliary Error Model (UQ Engine):** To map out generalization limits, a dedicated Error Model is trained to predict the residual errors of the primary network[cite: 4, 5]. It achieves a mean Spearman's rank correlation coefficient (SRCC) of **0.48**, massively outperforming traditional metrics like Euclidean distance to the training set (0.08) or ensemble variance (0.14)[cite: 5]. When evaluating severe distribution shifts—such as salts and zwitterions—its SRCC reaches up to **0.9**, proving its capacity to flag structural outliers effectively[cite: 5].
+
+📂 **[Click here to access the detailed Training, Cross-Validation, and Performance Results folder](./link-to-your-folder)**
+
+## 🚀 User flow
+
+Engineered for high-throughput screening, the ChemLens backend processes up to **30 molecules per second**[cite: 5], turning complex dual-inference calculations into a seamless user experience:
+
+1. **📥 Submit Molecules** — Users can input data by pasting SMILES strings, uploading bulk `.csv`/`.sdf` files, or sketching molecules directly via the interactive drawing tool[cite: 4].
+2. **⚙️ Dual-AI Inner Workings** — Once submitted, the system instantly executes the following pipeline[cite: 4]:
+   * *Continuous Descriptor Calculation* (extracting 159 physicochemical features via RDKit)[cite: 4].
+   * *Primary Model Inference* (generating the baseline LogS prediction)[cite: 4].
+   * *Error Model Inference* (calculating the expected residual error)[cite: 4].
+   * *Prediction Intervals & Error Classification* (defining the confidence boundaries)[cite: 4].
+3. **📋 Molecular Screening Results** — The interface generates a comprehensive, filterable table displaying key metrics for all submitted molecules, including Molecular Weight, LogP, and the predicted LogS coupled with its explicit $\pm$ error margin (color-coded for quick triage).
+4. **🔍 Deep-Dive Molecule Details** — Selecting a specific candidate reveals a detailed profile containing:
+   * **2D Structure & Physicochemical Properties:** A visual rendering of the molecule alongside an extensive table of calculated descriptors (e.g., MW, TPSA, nRot, nRing, FCharge).
+   * **Property Radar Chart:** A visual comparison mapping the compound's specific properties against established pharmacological upper and lower limits.
+   * **Reliability Assessment Module:** A dedicated LogS card displaying the predicted value and its Class Range (e.g., High Solubility). It features a dynamic gradient bar that maps the explicit prediction bounds (e.g., -0.17 to 1.61) across solubility classes, providing an automated textual verdict (e.g., "HIGH PREDICTIVE RELIABILITY") that explains exactly how the error margin impacts biological assay expectations.
+
 
 ## 🏗️ Architecture
 
